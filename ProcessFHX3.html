@@ -1,0 +1,1394 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ProcessFHX 3</title>
+<script>try { const t = localStorage.getItem('pfhx3.theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch (e) {}</script>
+<style>
+:root {
+  --bg: #f4f6f8; --panel: #ffffff; --panel2: #eef1f4; --text: #17202a; --muted: #5b6673;
+  --line: #d9dee4; --accent: #0b63c4; --accent-ink: #ffffff; --keep: #1d7f46; --drop: #b42318;
+  --warn: #9a4a05; --warn-bg: #fff3e0; --hid: #6941c6; --hover: #eaf2fb; --sel: #d6e7fa;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1317; --panel: #161b21; --panel2: #1d232b; --text: #e5e9ee; --muted: #98a3b0;
+    --line: #2b333d; --accent: #4f9cf9; --accent-ink: #08111c; --keep: #48c07a; --drop: #f97066;
+    --warn: #f5b546; --warn-bg: #2a2113; --hid: #a68bfa; --hover: #1c2632; --sel: #1a3352;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1317; --panel: #161b21; --panel2: #1d232b; --text: #e5e9ee; --muted: #98a3b0;
+  --line: #2b333d; --accent: #4f9cf9; --accent-ink: #08111c; --keep: #48c07a; --drop: #f97066;
+  --warn: #f5b546; --warn-bg: #2a2113; --hid: #a68bfa; --hover: #1c2632; --sel: #1a3352;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { background: var(--bg); color: var(--text); font: 13px/1.4 var(--sans); overflow: hidden; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; border: 1px solid var(--line); background: var(--panel); border-radius: 6px; padding: 5px 10px; }
+button:hover:not(:disabled) { border-color: var(--accent); }
+button:disabled { opacity: .45; cursor: default; }
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+button.link { border: 0; background: none; padding: 0; color: var(--accent); }
+button.small { padding: 2px 8px; font-size: 12px; }
+input[type=text], input[type=search], textarea { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; }
+input[type=checkbox] { accent-color: var(--accent); margin: 0; }
+.mono { font-family: var(--mono); font-size: 12px; }
+.muted { color: var(--muted); }
+
+#app { display: grid; grid-template-rows: auto 1fr auto; height: 100%; }
+header { display: flex; align-items: center; gap: 12px; padding: 8px 14px; background: var(--panel); border-bottom: 1px solid var(--line); }
+header h1 { font-size: 15px; margin: 0; white-space: nowrap; }
+header h1 span { color: var(--accent); }
+#fileinfo { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
+#fileinfo b { color: var(--text); }
+header .actions { display: flex; gap: 6px; }
+
+main { display: grid; grid-template-columns: var(--side, 265px) minmax(0, 1fr) 380px; min-height: 0; position: relative; }
+main.nodetail { grid-template-columns: var(--side, 265px) minmax(0, 1fr) 0; }
+#grip { position: absolute; top: 0; bottom: 0; left: calc(var(--side, 265px) - 3px); width: 7px; cursor: col-resize; z-index: 2; touch-action: none; }
+#grip:hover, #grip.drag { background: color-mix(in srgb, var(--accent) 35%, transparent); }
+body.resizing { cursor: col-resize; user-select: none; }
+#types { grid-column: 1; } #center { grid-column: 2; } #detail { grid-column: 3; }
+#tabs #closeDetail { display: none; flex: 0 0 40px; }
+#types { border-right: 1px solid var(--line); background: var(--panel); overflow: auto; padding: 8px 0; }
+#types .t { display: grid; grid-template-columns: 18px 1fr auto; gap: 6px; align-items: center; padding: 4px 12px; cursor: pointer; }
+#types .t:hover { background: var(--hover); }
+#types .t.on { background: var(--sel); }
+#types .t .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#types .t .nm small { display: block; color: var(--muted); font-family: var(--mono); font-size: 10.5px; overflow: hidden; text-overflow: ellipsis; }
+#types .t .ct { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 12px; }
+#types h3 { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 6px 12px 4px; display: flex; justify-content: space-between; gap: 8px; }
+#types h3 button.link { font-size: 11px; text-transform: none; letter-spacing: 0; }
+.kind { display: inline-block; font-size: 10px; font-weight: 600; padding: 0 5px; border-radius: 8px; margin-left: 4px; border: 1px solid var(--line); color: var(--muted); vertical-align: 1px; }
+.kind.EM { color: var(--accent); border-color: var(--accent); }
+.row .id small { color: var(--muted); font-family: var(--mono); font-size: 10.5px; margin-left: 4px; }
+.hidpill { display: inline-block; font-size: 10px; padding: 0 5px; border-radius: 8px; border: 1px solid var(--hid); color: var(--hid); }
+
+#center { display: grid; grid-template-rows: auto auto 1fr; grid-template-columns: minmax(0, 1fr); min-width: 0; min-height: 0; }
+#toolbar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 8px 10px; border-bottom: 1px solid var(--line); background: var(--panel); }
+#q { flex: 1 1 160px; max-width: 300px; min-width: 120px; }
+#toolbar .sp { flex: 1; }
+#toolbar label { display: inline-flex; gap: 5px; align-items: center; color: var(--muted); }
+:root { --cols: 30px 180px minmax(140px, 2fr) minmax(120px, 1.5fr) minmax(70px, 1fr) 100px 118px 64px; }
+#center, .row { overflow: hidden; }
+#thead, .row { display: grid; grid-template-columns: var(--cols); align-items: center; }
+#thead { background: var(--panel2); border-bottom: 1px solid var(--line); font-size: 12px; font-weight: 600; color: var(--muted); }
+#thead div { padding: 6px 8px; cursor: pointer; user-select: none; white-space: nowrap; overflow: hidden; }
+#thead .cb { display: flex; justify-content: center; cursor: default; }
+#thead div.sorted::after { content: " \25B2"; font-size: 9px; }
+#thead div.sorted.desc::after { content: " \25BC"; }
+#scroller { overflow: auto; position: relative; min-height: 0; }
+#rows { position: relative; }
+.row { position: absolute; left: 0; right: 0; height: 28px; border-bottom: 1px solid var(--line); background: var(--panel); cursor: default; }
+.row:hover { background: var(--hover); }
+.row.sel { background: var(--sel); }
+.row > div { padding: 0 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row .cb { display: flex; justify-content: center; }
+.row.dropped > div:not(.cb) { opacity: .45; text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--drop) 60%, transparent); }
+.row.hid .id { color: var(--hid); }
+.row .ty { font-family: var(--mono); font-size: 11.5px; color: var(--muted); }
+.row .num { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
+.lock { font-size: 11px; color: var(--muted); }
+#empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--muted); }
+#empty[hidden] { display: none; }
+
+#detail { border-left: 1px solid var(--line); background: var(--panel); display: grid; grid-template-rows: auto 1fr; min-height: 0; overflow: hidden; }
+#tabs { display: flex; border-bottom: 1px solid var(--line); }
+#tabs button { flex: 1; border: 0; border-radius: 0; background: none; padding: 9px; color: var(--muted); border-bottom: 2px solid transparent; }
+#tabs button.on { color: var(--text); border-bottom-color: var(--accent); font-weight: 600; }
+#pane { overflow: auto; padding: 12px 14px 30px; }
+#pane h2 { font-size: 15px; margin: 0 0 4px; word-break: break-all; }
+#pane h4 { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 18px 0 6px; display: flex; justify-content: space-between; align-items: center; }
+#pane table.kv { border-collapse: collapse; width: 100%; }
+#pane table.kv td { padding: 3px 0; vertical-align: top; }
+#pane table.kv td:first-child { color: var(--muted); width: 100px; padding-right: 8px; }
+#pane table.kv td:last-child { word-break: break-all; }
+.chip { display: inline-block; padding: 1px 7px; border-radius: 10px; font-size: 11.5px; border: 1px solid var(--line); }
+.chip.keep { color: var(--keep); border-color: var(--keep); }
+.chip.drop { color: var(--drop); border-color: var(--drop); }
+.chip.hid { color: var(--hid); border-color: var(--hid); }
+.chip.warn { color: var(--warn); border-color: var(--warn); }
+.ref { display: grid; grid-template-columns: 10px 1fr auto; gap: 7px; align-items: baseline; padding: 3px 0; border-bottom: 1px dashed var(--line); }
+.ref .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.ref .dot.k { background: var(--keep); } .ref .dot.d { background: var(--drop); } .ref .dot.h { background: var(--hid); } .ref .dot.b { background: var(--muted); }
+.ref .nm { word-break: break-all; }
+.ref .nm small { color: var(--muted); font-family: var(--mono); font-size: 10.5px; margin-left: 4px; }
+.ref .via { color: var(--muted); font-family: var(--mono); font-size: 10.5px; }
+pre.raw { background: var(--panel2); border: 1px solid var(--line); border-radius: 6px; padding: 8px; font: 11.5px/1.45 var(--mono); max-height: 420px; overflow: auto; white-space: pre; }
+.callout { background: var(--warn-bg); border: 1px solid color-mix(in srgb, var(--warn) 40%, transparent); color: var(--text); border-radius: 6px; padding: 8px 10px; margin: 6px 0; }
+.callout.ok { background: color-mix(in srgb, var(--keep) 10%, transparent); border-color: color-mix(in srgb, var(--keep) 40%, transparent); }
+.need { padding: 6px 0; border-bottom: 1px dashed var(--line); display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: start; }
+.need .by { color: var(--muted); font-size: 12px; }
+
+footer { display: flex; align-items: center; gap: 10px; padding: 8px 14px; background: var(--panel); border-top: 1px solid var(--line); }
+#summary { flex: 1; font-variant-numeric: tabular-nums; }
+#summary b.k { color: var(--keep); }
+#verifyMsg { font-size: 12px; max-width: 360px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: help; }
+#verifyMsg.good { color: var(--keep); } #verifyMsg.bad { color: var(--drop); font-weight: 600; }
+#saveSummary h4.rmh { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 14px 0 6px; }
+table.rm { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+table.rm td { border-bottom: 1px solid var(--line); padding: 4px 6px; vertical-align: top; }
+table.rm td:first-child { white-space: nowrap; padding-left: 0; }
+table.rm td.ct { white-space: nowrap; color: var(--drop); font-variant-numeric: tabular-nums; }
+table.rm td:last-child { word-break: break-word; }
+#checkbadge { display: none; }
+#checkbadge.show { display: inline-block; }
+
+#drop { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: var(--bg); z-index: 5; }
+#drop.hidden { display: none; }
+#drop .box { width: min(620px, calc(100vw - 32px)); border: 2px dashed var(--line); border-radius: 14px; padding: 40px 28px; text-align: center; background: var(--panel); }
+#drop.over .box { border-color: var(--accent); background: var(--hover); }
+#drop h2 { margin: 0 0 6px; font-size: 22px; }
+#drop p { color: var(--muted); margin: 6px 0; }
+#drop ul { text-align: left; color: var(--muted); margin: 18px auto 0; max-width: 470px; padding-left: 18px; }
+#drop ul li { margin: 3px 0; }
+#busy { position: fixed; inset: 0; background: color-mix(in srgb, var(--bg) 80%, transparent); display: none; align-items: center; justify-content: center; z-index: 20; }
+#busy.show { display: flex; }
+#busy .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px 22px; width: 340px; }
+#busy .bar { height: 6px; background: var(--panel2); border-radius: 3px; overflow: hidden; margin-top: 10px; }
+#busy .bar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .15s; }
+
+dialog { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); color: var(--text); padding: 0; width: min(760px, calc(100vw - 32px)); }
+dialog::backdrop { background: rgba(0,0,0,.35); }
+dialog .hd { padding: 12px 16px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; }
+dialog .hd h3 { margin: 0; font-size: 15px; }
+dialog .bd { padding: 14px 16px; max-height: calc(100vh - 200px); overflow: auto; }
+dialog .ft { padding: 10px 16px; border-top: 1px solid var(--line); display: flex; gap: 8px; justify-content: flex-end; align-items: center; }
+dialog .ft .sp { flex: 1; }
+#rulesText { width: 100%; height: 300px; font: 12px/1.5 var(--mono); white-space: pre; }
+#rulesLog { font: 12px/1.5 var(--mono); max-height: 160px; overflow: auto; background: var(--panel2); border-radius: 6px; padding: 6px 8px; margin-top: 8px; white-space: pre-wrap; }
+#rulesLog .w { color: var(--warn); } #rulesLog .e { color: var(--drop); }
+.field { display: flex; align-items: center; gap: 8px; margin: 8px 0; }
+.field input[type=text] { flex: 1; }
+#help code, .bd code { font-family: var(--mono); font-size: 12px; background: var(--panel2); padding: 0 4px; border-radius: 4px; }
+#help table { border-collapse: collapse; width: 100%; margin: 6px 0; }
+#help td { border-bottom: 1px solid var(--line); padding: 4px 6px; vertical-align: top; }
+#toast { position: fixed; bottom: 60px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 8px 14px; border-radius: 8px; opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 30; max-width: 80vw; }
+#toast.show { opacity: .95; }
+
+@media (max-width: 1100px) {
+  main, main.nodetail { grid-template-columns: var(--side, 200px) minmax(0, 1fr) 0; }
+  main.mdetail #grip { display: none; }
+  main.mdetail { grid-template-columns: 0 minmax(0, 1fr) 340px; }
+  main.mdetail { grid-template-columns: 0 minmax(0, 1fr) 360px; }
+  main.mdetail #types { display: none; }
+  main:not(.mdetail) #detail { display: none; }
+  #tabs #closeDetail { display: block; }
+  :root { --cols: 30px 160px minmax(160px, 2fr) minmax(130px, 1fr) 64px; }
+  .c-cls, .c-user, .c-time { display: none; }
+}
+@media (max-width: 700px) {
+  header { flex-wrap: wrap; padding: 8px 16px; }
+  main, main.nodetail, main.mdetail { grid-template-columns: 0 minmax(0, 1fr) 0; }
+  #types, #detail, #grip { display: none; }
+  :root { --cols: 30px minmax(140px, 1fr) 60px; }
+  .c-type, .c-where { display: none; }
+  #q { width: 100%; }
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>Process<span>FHX</span> 3</h1>
+    <div id="fileinfo">No file loaded</div>
+    <div class="actions">
+      <button id="btnOpen">Open FHX…</button>
+      <button id="btnRules" disabled title="Save this selection as a rule file and re-apply it to the next export (ProcessFHX2 .prc files work too)">Saved selections…</button>
+      <button id="btnHelp">Help</button>
+      <button id="btnTheme" title="Switch theme">Theme: Auto</button>
+    </div>
+  </header>
+  <main id="main">
+    <aside id="types"></aside>
+    <div id="grip" title="Drag to resize · double-click to reset"></div>
+    <section id="center">
+      <div id="toolbar">
+        <input id="q" type="search" placeholder="Filter by name, tag, category, area, class, user…  ( / )">
+        <label title="Embedded composites and other hidden definitions (__XXXXXXXX_XXXXXXXX__) are the private logic of a class or module. They are kept or dropped automatically with the items that use them."><input type="checkbox" id="showHidden"> Show embedded composites</label>
+        <span class="sp"></span>
+        <span id="shown" class="muted"></span>
+        <button id="btnKeepShown" class="small" title="Select every item currently shown in the list">Select shown</button>
+        <button id="btnDropShown" class="small" title="Deselect every item currently shown in the list">Deselect shown</button>
+        <button id="btnOnlyShown" class="small" title="Select the items shown and deselect everything else in the file">Only shown</button>
+      </div>
+      <div id="thead"></div>
+      <div id="scroller"><div id="rows"></div><div id="empty" hidden>No items match.</div></div>
+    </section>
+    <aside id="detail">
+      <div id="tabs"><button data-tab="item" class="on">Details</button><button data-tab="check">Export check</button><button id="closeDetail" title="Close panel (Esc)">✕</button></div>
+      <div id="pane"></div>
+    </aside>
+  </main>
+  <footer>
+    <div id="summary"></div>
+    <span id="verifyMsg" hidden></span>
+    <button id="checkbadge" class="small"></button>
+    <button id="btnReport" disabled title="Save a CSV listing every item and whether it is included">Report CSV</button>
+    <button id="btnSave" class="primary" disabled>Save clean FHX…</button>
+  </footer>
+</div>
+
+<div id="drop">
+  <div class="box">
+    <h2>Drop a DeltaV export (.fhx) here</h2>
+    <p>or <button class="link" id="btnOpen2">choose a file</button>. You can also drop a ProcessFHX <code>.prc</code> procedure file.</p>
+    <p class="muted">Everything runs in this browser. Nothing is uploaded.</p>
+    <ul>
+      <li>Untick what you don't want, or apply a saved rule file.</li>
+      <li>Hidden <code>__XXXX__</code> definitions are kept or dropped with the class or module that owns them.</li>
+      <li><b>Export check</b> lists the items your selection references but doesn't include, so you know what the target system must already have.</li>
+      <li>Saves byte-for-byte: kept items are written exactly as exported, with the same encoding and line endings.</li>
+    </ul>
+  </div>
+</div>
+<div id="busy"><div class="card"><div id="busyMsg">Loading…</div><div class="bar"><i id="busyBar"></i></div></div></div>
+<div id="toast"></div>
+<input type="file" id="fileIn" accept=".fhx,.FHX,.prc,.PRC,.txt" hidden>
+<input type="file" id="prcIn" accept=".prc,.PRC,.txt" hidden>
+
+<dialog id="dlgRules">
+  <div class="hd"><h3>Saved selections (rule files)</h3><button class="small" data-close>Close</button></div>
+  <div class="bd">
+    <p style="margin-top:0"><b>Optional.</b> Use this when you clean the same kind of export again and again. Instead of ticking the same boxes every time, save the selection as a short rule file, then load and apply it to the next export.</p>
+    <ol class="muted" style="margin:0 0 10px;padding-left:20px">
+      <li>Tick what you want in the main list, then press <b>Rules from current selection</b>.</li>
+      <li><b>Save as .prc…</b> to keep it. Next time, <b>Load .prc…</b> and press <b>Apply</b>.</li>
+    </ol>
+    <p class="muted" style="margin-top:0">This is the same <code>.prc</code> “procedure” format as ProcessFHX2, so older rule files work here. Ready-made examples (keep EM classes, keep one unit, drop library items) are in the <code>Examples</code> folder next to this page. Rules run top to bottom; Help lists the syntax.</p>
+    <textarea id="rulesText" spellcheck="false"></textarea>
+    <div id="rulesLog" hidden></div>
+    <label class="field"><input type="checkbox" id="autoApply"> Apply these rules automatically whenever a file is opened</label>
+  </div>
+  <div class="ft">
+    <button id="btnLoadPrc">Load .prc…</button>
+    <button id="btnFromSel" title="Replace the text with rules that reproduce the current selection">Rules from current selection</button>
+    <button id="btnSavePrc">Save as .prc…</button>
+    <span class="sp"></span>
+    <button id="btnApplyRules" class="primary">Apply</button>
+  </div>
+</dialog>
+
+<dialog id="dlgSave">
+  <div class="hd"><h3>Save clean FHX</h3><button class="small" data-close>Close</button></div>
+  <div class="bd">
+    <div id="saveSummary"></div>
+    <label class="field">File name <input type="text" id="saveName"></label>
+    <label class="field"><input type="checkbox" id="saveRemoved"> Also save the removed items to <span id="removedName" class="mono"></span></label>
+    <label class="field"><input type="checkbox" id="replUser"> Change the <code>user=</code> on every saved item to <input type="text" id="replUserVal" placeholder="e.g. ADMINISTRATOR" style="max-width:200px"></label>
+    <p class="muted" style="margin-bottom:0">Kept items are written exactly as they appear in the source file. The source file is never changed.</p>
+  </div>
+  <div class="ft"><span class="sp"></span><button data-close>Cancel</button><button id="btnDoSave" class="primary">Save</button></div>
+</dialog>
+
+<dialog id="dlgHelp">
+  <div class="hd"><h3>ProcessFHX 3 — Help</h3><button class="small" data-close>Close</button></div>
+  <div class="bd" id="help">
+    <h4>Workflow</h4>
+    <ol>
+      <li>Open a DeltaV export. Everything starts as <b>kept</b>.</li>
+      <li>Untick items, use the type list on the left (its checkbox selects or deselects a whole group; <b>Select all</b> / <b>None</b> sit at the top), tick the box at the top of the list to select or deselect everything shown, or filter and use <b>Only shown</b>. Drag the left pane's edge to resize it.</li>
+      <li>Open <b>Export check</b> to see what the kept items reference but you've excluded. Those must already exist in the target database, or the import will fail.</li>
+      <li><b>Save clean FHX</b>. The save dialog lists <b>what's being removed</b> so you can spot accidental drops. After saving, the file is re-read and checked automatically; <b>✓ Verified</b> appears at the bottom when it holds exactly your selection, unchanged. Optionally save the selection (<b>Saved selections → Save as .prc</b>) to repeat the same clean on the next export.</li>
+    </ol>
+    <h4>Equipment vs control modules</h4>
+    <p>Module classes and module instances are split into equipment-module (<span class="kind EM">EM</span>) and control-module (<span class="kind CM">CM</span>) groups. A class counts as an EM when DeltaV files it under <code>Equipment Module Classes</code>, or when it uses a command- or state-driven algorithm. An instance takes its kind from its class. Phase classes have their own group.</p>
+    <h4>Embedded composites &amp; hidden definitions</h4>
+    <p>Each one is labelled with the class/module and block that use it, for example <code>EM01-00 › COMMAND_00001</code>, taken from the comment DeltaV writes above it in the export. Filtering by a class name also finds its embedded composites. DeltaV exports a class's or module's private logic (SFCs, embedded composites, action blocks) as separate <code>FUNCTION_BLOCK_DEFINITION NAME="__695C4276_014330EB__"</code> items. ProcessFHX 3 follows the references and keeps exactly the hidden definitions that kept items use, including nested ones. Hidden definitions that belong to dropped items are removed with them. To keep every hidden definition regardless, as ProcessFHX2 did, turn that on in Export check.</p>
+    <p><code>SCHEMA</code> and <code>LOCALE</code> are always kept, because DeltaV needs them to import the file.</p>
+    <h4>Saved selections — rule syntax</h4>
+    <p>One rule per line. Lines starting with <code>#</code> are comments.</p>
+    <table>
+      <tr><td><code>SELECT_ALL</code> / <code>SELECT_NONE</code></td><td>Keep or drop everything.</td></tr>
+      <tr><td><code>FIELD = &lt;text&gt;,&lt;True|False&gt;,&lt;Select|Deselect&gt;</code></td><td>Exact match. The middle value is <i>case sensitive</i>.</td></tr>
+      <tr><td><code>FIELD Contains &lt;text&gt;,…</code></td><td>Substring match.</td></tr>
+      <tr><td><code>FIELD Matches &lt;regex&gt;,…</code></td><td>Regular expression (new in v3).</td></tr>
+      <tr><td>FIELD is one of</td><td><code>CATEGORY NAME TAG TYPE USER PLANT_AREA CLASS</code>. <code>NAME</code> also matches the tag of items that have no name. <code>CLASS</code> also matches <code>MODULE_CLASS</code>.</td></tr>
+      <tr><td><code>REQD_FBS</code></td><td>Also keep the function block definitions and templates that kept items use, recursively (same as ProcessFHX2).</td></tr>
+      <tr><td><code>REQD_ALL</code></td><td>Also keep everything kept items reference (classes, named sets, composites, areas…), recursively (new in v3).</td></tr>
+    </table>
+    <p>Example — keep two EM classes and nothing from the library:</p>
+<pre class="raw">SELECT_NONE
+TYPE = &lt;MODULE_CLASS&gt;,&lt;True&gt;,&lt;Select&gt;
+NAME Matches &lt;^EM0[13]-00$&gt;,&lt;True&gt;,&lt;Select&gt;
+CATEGORY Contains &lt;Control Module Classes&gt;,&lt;True&gt;,&lt;Deselect&gt;</pre>
+    <h4>Shortcuts</h4>
+    <p><code>/</code> focus the filter · <code>Ctrl/⌘ S</code> save · <code>Shift</code>-click a checkbox to set a range.</p>
+  </div>
+</dialog>
+
+<script>
+/* ===================== Parsing engine (runs in a Web Worker) ===================== */
+function engineFactory(scope) {
+  let bytes = null, u = null, w = 1, base = 0, enc = '', td = null, E = [], n = 0;
+  const REF_KEYS = new Set(['DEFINITION', 'MODULE', 'MODULE_CLASS', 'CLASS', 'SET', 'COMMAND_SET', 'STATE_SET',
+    'NAMED_SET', 'ENUMERATION_SET', 'DRIVE_FB', 'STATE_FB', 'TARGET_REACHED_FB', 'PLANT_AREA', 'PROCESS_CELL',
+    'UNIT', 'UNIT_CLASS', 'UNIT_MODULE', 'PHASE_CLASS', 'EQUIPMENT_MODULE_CLASS', 'CONTROLLER', 'PHYSICAL_DEVICE',
+    'ALARM_TYPE', 'SIGNATURE_POLICY', 'ELECTRONIC_SIGNATURE_POLICY', 'HART_DEVICE_TYPE', 'MANUFACTURER']);
+
+  function isId(c) { return (c >= 65 && c <= 90) || (c >= 97 && c <= 122) || (c >= 48 && c <= 57) || c === 95; }
+  function eol(k) { while (k < n && u[k] !== 10) k++; return k < n ? k + 1 : n; }
+  function find2(k, a, b) { for (; k < n - 1; k++) if (u[k] === a && u[k + 1] === b) return k; return -1; }
+  function str(a, b) {
+    if (w === 2) {
+      let s = '';
+      for (let k = a; k < b; k += 8192) s += String.fromCharCode.apply(null, u.subarray(k, Math.min(b, k + 8192)));
+      return s;
+    }
+    for (let k = a; k < b; k++) if (u[k] > 127) return td.decode(u.subarray(a, b));
+    let s = '';
+    for (let k = a; k < b; k += 8192) s += String.fromCharCode.apply(null, u.subarray(k, Math.min(b, k + 8192)));
+    return s;
+  }
+  function validUtf8(b) {
+    for (let i = 0; i < b.length; i++) {
+      const c = b[i];
+      if (c < 0x80) continue;
+      let m = c >= 0xF0 && c <= 0xF4 ? 3 : c >= 0xE0 ? 2 : c >= 0xC2 && c < 0xE0 ? 1 : -1;
+      if (m < 0) return false;
+      while (m--) { i++; if (i >= b.length || (b[i] & 0xC0) !== 0x80) return false; }
+    }
+    return true;
+  }
+  const CP1252 = [0x20AC, 0x81, 0x201A, 0x192, 0x201E, 0x2026, 0x2020, 0x2021, 0x2C6, 0x2030, 0x160, 0x2039, 0x152, 0x8D, 0x17D, 0x8F,
+    0x90, 0x2018, 0x2019, 0x201C, 0x201D, 0x2022, 0x2013, 0x2014, 0x2DC, 0x2122, 0x161, 0x203A, 0x153, 0x9D, 0x17E, 0x178];
+  function encode(s) {
+    if (enc === 'utf-16le') {
+      const o = new Uint8Array(s.length * 2);
+      for (let i = 0; i < s.length; i++) { const c = s.charCodeAt(i); o[2 * i] = c & 255; o[2 * i + 1] = c >> 8; }
+      return o;
+    }
+    if (enc === 'utf-8') return new TextEncoder().encode(s);
+    const o = new Uint8Array(s.length);
+    for (let i = 0; i < s.length; i++) {
+      const c = s.charCodeAt(i);
+      if (c < 0x80 || (c >= 0xA0 && c <= 0xFF)) o[i] = c;
+      else { const x = CP1252.indexOf(c); o[i] = x >= 0 ? 0x80 + x : 63; }
+    }
+    return o;
+  }
+  function slice(a, b) { return bytes.subarray(base + a * w, base + b * w); }
+
+  function parseEntity(j) {
+    let depth = 0, opened = false, hdrEnd = -1, close = -1, inStr = false, strStart = 0, key = null, k = j, alg = null;
+    const refs = [], seen = new Set();
+    // Module bodies name their algorithm (FBD, SFC, COMMAND_DRIVEN, STATE_DRIVEN) at depth 1; EMs use the last two.
+    const isMod = /^(MODULE_CLASS|MODULE_INSTANCE|MODULE) /.test(str(j, Math.min(n, j + 16)));
+    const add = (kk, v) => {
+      const vals = kk === 'PLANT_AREA' ? v.split('/') : [v];
+      for (const x of vals) {
+        if (!x) continue;
+        const id = kk + '\u0000' + x;
+        if (!seen.has(id)) { seen.add(id); refs.push([kk, x]); }
+      }
+    };
+    for (; k < n; k++) {
+      const c = u[k];
+      if (inStr) {
+        if (c === 34) { inStr = false; if (key !== null) { add(key, str(strStart, k)); key = null; } }
+        continue;
+      }
+      if (c === 34) {
+        inStr = true; strStart = k + 1; key = null;
+        if (u[k - 1] === 61) {
+          let a = k - 1;
+          while (a > j && isId(u[a - 1])) a--;
+          if (a < k - 1 && a > j) { const kk = str(a, k - 1); if (REF_KEYS.has(kk)) key = kk; }
+        }
+        continue;
+      }
+      if (c === 47 && u[k + 1] === 42) { const p = find2(k + 2, 42, 47); if (p < 0) { k = n; break; } k = p + 1; continue; }
+      if (c === 123) { if (!opened) { opened = true; hdrEnd = k; } depth++; }
+      else if (c === 125) { depth--; if (opened && depth <= 0) { close = k; break; } }
+      else if (c === 10 && !opened) {
+        const nx = u[k + 1];
+        if (nx >= 65 && nx <= 90) { close = k; hdrEnd = k; break; }
+      }
+      else if (c === 10 && isMod && depth === 1 && !alg) {
+        let p = k + 1; while (p < n && u[p] === 32) p++;
+        let q = p; while (q < n && q - p < 40 && isId(u[q])) q++;
+        if (q - p > 10 && u[q - 1] === 77) { const s = str(p, q); if (s.endsWith('_ALGORITHM')) alg = s; }
+      }
+    }
+    let warn = null;
+    if (close < 0) { close = n - 1; warn = 'not closed before end of file'; }
+    if (hdrEnd < 0) hdrEnd = close;
+    const end = eol(close);
+    const hdr = str(j, Math.min(hdrEnd, j + 4000)).replace(/\/\*[\s\S]*?\*\//g, ' ');
+    const type = (hdr.match(/^[A-Z0-9_]+/) || ['?'])[0];
+    const a = {};
+    const re = /([A-Za-z_][A-Za-z0-9_]*)=(?:"([^"]*)"|([^\s{"]+))/g;
+    let m;
+    const rest = hdr.slice(type.length);
+    while ((m = re.exec(rest))) if (!(m[1] in a)) a[m[1]] = m[2] !== undefined ? m[2] : m[3];
+    return { type, a, start: j, hdrEnd, end, refs, warn, alg };
+  }
+
+  function parse(quiet) {
+    E = [];
+    const warns = [];
+    let i = 0, segStart = 0, nextP = 1 << 22, using = null;
+    while (i < n) {
+      if (i > nextP && !quiet) { scope.postMessage({ ev: 'progress', p: i / n }); nextP = i + (1 << 22); }
+      let j = i;
+      while (j < n && (u[j] === 32 || u[j] === 9)) j++;
+      if (j >= n) break;
+      const c = u[j];
+      if (c === 13 || c === 10) { i = eol(j); continue; }
+      if (c === 47 && u[j + 1] === 42) {
+        const p = find2(j + 2, 42, 47);
+        // DeltaV writes /* FUNCTION BLOCK(S) USING:"__X__" "OWNER/BLOCK" ... */ before each hidden definition.
+        if (p > 0 && str(j, Math.min(n, j + 27)) === '/* FUNCTION BLOCK(S) USING:') using = str(j, Math.min(p, j + 200000));
+        i = p < 0 ? n : eol(p + 2); continue;
+      }
+      if (j === i && c >= 65 && c <= 90) {
+        const e = parseEntity(j);
+        e.seg = E.length === 0 ? j : segStart;
+        if (using) {
+          const q = [...using.matchAll(/"([^"]*)"/g)].map(x => x[1]);
+          if (q[0] === e.a.NAME) e.using = q.slice(1);
+          using = null;
+        }
+        if (e.warn && warns.length < 100) warns.push(e.type + ' ' + (e.a.NAME || e.a.TAG || '') + ': ' + e.warn);
+        E.push(e);
+        segStart = e.end; i = e.end;
+        continue;
+      }
+      if (warns.length < 100) {
+        const prev = E.length ? E[E.length - 1] : null;
+        warns.push('Unexpected text "' + str(j, Math.min(eol(j), j + 60)).trim() + '"' + (prev ? ' after ' + prev.type + ' ' + (prev.a.NAME || prev.a.TAG || '') : ''));
+      }
+      i = eol(j);
+    }
+    return warns;
+  }
+
+  // Points the reader at buf: detects the encoding and sets up the view parse() scans.
+  function setInput(buf) {
+    bytes = new Uint8Array(buf);
+    if (bytes[0] === 0xFF && bytes[1] === 0xFE) { enc = 'utf-16le'; base = 2; w = 2; }
+    else if (bytes[0] === 0xFE && bytes[1] === 0xFF) throw new Error('UTF-16 big-endian files are not supported.');
+    else if (bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF) { enc = 'utf-8'; base = 3; w = 1; }
+    else if (bytes.length > 3 && bytes[1] === 0 && bytes[3] === 0 && bytes[0] !== 0) { enc = 'utf-16le'; base = 0; w = 2; }
+    else { base = 0; w = 1; enc = validUtf8(bytes) ? 'utf-8' : 'windows-1252'; }
+    if (w === 2) {
+      const len = (bytes.length - base) >> 1;
+      u = base % 2 === 0 ? new Uint16Array(buf, base, len) : new Uint16Array(bytes.slice(base, base + len * 2).buffer);
+    } else u = bytes.subarray(base);
+    n = u.length;
+    td = new TextDecoder(enc);
+  }
+
+  async function load(file) {
+    setInput(await file.arrayBuffer());
+    const warns = parse();
+    const meta = E.map(e => ({ type: e.type, a: e.a, refs: e.refs, bytes: (e.end - e.seg) * w, alg: e.alg, using: e.using }));
+    let crlf = 0, lf = 0;
+    for (let k = 0, c = 0; k < n && c < 2000; k++) if (u[k] === 10) { c++; if (u[k - 1] === 13) crlf++; else lf++; }
+    scope.postMessage({ ev: 'loaded', meta, warns, enc, size: bytes.length, eolStyle: crlf >= lf ? 'CRLF' : 'LF',
+      header: str(0, E.length ? E[0].seg : Math.min(n, 400)).trim() });
+  }
+
+  function build(keep, user) {
+    const parts = [];
+    if (base) parts.push(bytes.subarray(0, base));
+    if (!E.length) { parts.push(slice(0, n)); return new Blob(parts); }
+    let runA = 0, runB = E[0].seg;
+    const flush = () => { if (runB > runA) parts.push(slice(runA, runB)); };
+    for (let i = 0; i < E.length; i++) {
+      if (!keep[i]) continue;
+      const e = E[i];
+      if (user !== null) {
+        const h = str(e.start, e.hdrEnd);
+        const h2 = h.replace(/(\buser=")[^"]*(")/, (_, p, q) => p + user + q);
+        if (h2 !== h) {
+          if (e.seg === runB) runB = e.start; else { flush(); runA = e.seg; runB = e.start; }
+          flush(); parts.push(encode(h2)); runA = e.hdrEnd; runB = e.end;
+          continue;
+        }
+      }
+      if (e.seg === runB) runB = e.end; else { flush(); runA = e.seg; runB = e.end; }
+    }
+    const last = E[E.length - 1].end;
+    if (runB === last) runB = n; else { flush(); runA = last; runB = n; }
+    flush();
+    return new Blob(parts, { type: 'application/octet-stream' });
+  }
+
+  // Re-reads a saved file and checks it holds exactly the kept items, in order, each identical to the source.
+  // With a user= replacement only the item bodies are compared, since the headers were meant to change.
+  async function verify(blob, keep, user) {
+    const src = { bytes, u, w, base, enc, td, E, n };
+    const kept = [];
+    for (let i = 0; i < src.E.length; i++) if (keep[i]) kept.push(src.E[i]);
+    const r = { expected: kept.length, problems: [] };
+    try {
+      setInput(await blob.arrayBuffer());
+      r.warns = parse(true);
+      r.found = E.length;
+      r.enc = enc;
+      if (enc !== src.enc || base !== src.base) r.problems.push('Encoding changed: ' + src.enc + ' → ' + enc);
+      if (r.warns.length) r.problems.push(r.warns.length + ' parse warning(s): ' + r.warns.slice(0, 3).join('; '));
+      if (E.length !== kept.length) r.problems.push('Expected ' + kept.length + ' items but the file has ' + E.length);
+      const name = (e) => e.type + ' ' + (e.a.NAME || e.a.TAG || '');
+      let bad = 0;
+      for (let k = 0; k < Math.min(E.length, kept.length); k++) {
+        const a = kept[k], b = E[k];
+        const a0 = user === null ? a.start : a.hdrEnd, b0 = user === null ? b.start : b.hdrEnd;
+        const x = src.bytes.subarray(src.base + a0 * src.w, src.base + a.end * src.w);
+        const y = bytes.subarray(base + b0 * w, base + b.end * w);
+        let same = name(a) === name(b) && x.length === y.length;
+        for (let q = 0; same && q < x.length; q++) if (x[q] !== y[q]) same = false;
+        if (!same && ++bad <= 5) r.problems.push('Item ' + (k + 1) + ' differs from the source: ' + name(a) + (name(a) !== name(b) ? ' (found ' + name(b) + ')' : ''));
+      }
+      if (bad > 5) r.problems.push('…and ' + (bad - 5) + ' more items differ');
+      for (const t of ['SCHEMA', 'LOCALE']) if (src.E.some(e => e.type === t) && !E.some(e => e.type === t)) r.problems.push(t + ' is missing');
+    } finally {
+      ({ bytes, u, w, base, enc, td, E, n } = src);
+    }
+    return r;
+  }
+
+  scope.onmessage = async (ev) => {
+    const d = ev.data;
+    try {
+      if (d.cmd === 'load') await load(d.file);
+      else if (d.cmd === 'verify') scope.postMessage({ ev: 'verified', id: d.id, result: await verify(d.blob, d.keep, d.user) });
+      else if (d.cmd === 'preview') {
+        const e = E[d.i], cap = 120000;
+        let t = str(e.seg, Math.min(e.end, e.start + cap));
+        scope.postMessage({ ev: 'preview', i: d.i, text: t, cut: e.end > e.start + cap });
+      } else if (d.cmd === 'build') {
+        scope.postMessage({ ev: 'built', id: d.id, blob: build(d.keep, d.user) });
+      }
+    } catch (err) {
+      scope.postMessage({ ev: 'error', message: String(err && err.message || err), id: d.id });
+    }
+  };
+}
+
+/* ===================== Engine connection ===================== */
+const engine = (() => {
+  let wk = null;
+  const handlers = new Set();
+  try {
+    const src = '(' + engineFactory.toString() + ')(self);';
+    wk = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })));
+    wk.onmessage = (e) => handlers.forEach(h => h(e.data));
+  } catch (e) { wk = null; }
+  if (!wk) {
+    const fake = { postMessage: (m) => setTimeout(() => handlers.forEach(h => h(m))) };
+    engineFactory(fake);
+    wk = { postMessage: (m) => fake.onmessage({ data: m }) };
+  }
+  return { send: (m) => wk.postMessage(m), on: (h) => handlers.add(h), off: (h) => handlers.delete(h) };
+})();
+function engineCall(msg, done) {
+  return new Promise((res, rej) => {
+    const id = Math.random().toString(36).slice(2);
+    const h = (d) => {
+      if (d.id !== id && !(d.ev === done && d.i === msg.i && msg.i !== undefined)) return;
+      engine.off(h);
+      d.ev === 'error' ? rej(new Error(d.message)) : res(d);
+    };
+    engine.on(h);
+    engine.send(Object.assign({ id }, msg));
+  });
+}
+
+/* ===================== App state ===================== */
+const $ = (s) => document.querySelector(s);
+const HIDDEN_RE = /^__[0-9A-F]{8}_[0-9A-F]{8}__$/i;
+const LOCKED_TYPES = new Set(['SCHEMA', 'LOCALE']);
+const FRIENDLY = {
+  SCHEMA: 'Schema', LOCALE: 'Locale', MODULE_INSTANCE: 'Module instances', MODULE: 'Modules (no class)',
+  MODULE_CLASS: 'Module classes', FUNCTION_BLOCK_DEFINITION: 'Composites / FB definitions',
+  FUNCTION_BLOCK_TEMPLATE: 'Function block templates', ENUMERATION_SET: 'Named sets', ENUMERATION_SET_ID: 'Named set IDs',
+  PLANT_AREA: 'Plant areas', BATCH_EQUIPMENT_UNIT_MODULE: 'Unit modules', BATCH_EQUIPMENT_UNIT_MODULE_CLASS: 'Unit classes',
+  BATCH_EQUIPMENT_PROCESS_CELL: 'Process cells', BATCH_EQUIPMENT_PROCESS_CELL_CLASS: 'Process cell classes',
+  BATCH_EQUIPMENT_PHASE_CLASS: 'Phase classes', BATCH_RECIPE: 'Recipes', USER_ALARM: 'User alarms',
+  USER_ALARM_INDEXED: 'Alarm words', ALARM_ANNUNCIATION: 'Alarm priorities', SIF_MODULE: 'SIF modules',
+  CONTROLLER_NODE: 'Controllers', OPERATOR_NODE: 'Operator stations', PROFESSIONAL_PLUS_NODE: 'ProPlus',
+  USER: 'Users', GROUP: 'Groups', LOCK: 'Locks', ENGINEERING_UNIT: 'Engineering units', CHARM: 'CHARMs',
+  ELECTRONIC_SIGNATURE_POLICY: 'E-signature policies', SYSTEM_ENUMERATION_SET: 'System named sets',
+  'MODULE_CLASS#EM': 'Equipment module classes', 'MODULE_CLASS#CM': 'Control module classes',
+  'MODULE_INSTANCE#EM': 'Equipment modules', 'MODULE_INSTANCE#CM': 'Control modules',
+  MODULE_INSTANCE: 'Modules (class not in file)', 'MODULE#EM': 'Equipment modules (no class)', 'MODULE#CM': 'Control modules (no class)',
+};
+// Sidebar order: the things people pick first, then supporting items in file order, plumbing last.
+const GROUP_FIRST = ['MODULE_CLASS#EM', 'MODULE_CLASS#CM', 'BATCH_EQUIPMENT_PHASE_CLASS', 'BATCH_EQUIPMENT_UNIT_MODULE_CLASS',
+  'BATCH_EQUIPMENT_PROCESS_CELL_CLASS', 'MODULE_INSTANCE#EM', 'MODULE_INSTANCE#CM', 'MODULE_INSTANCE', 'MODULE#EM', 'MODULE#CM',
+  'BATCH_EQUIPMENT_UNIT_MODULE', 'BATCH_EQUIPMENT_PROCESS_CELL', 'FUNCTION_BLOCK_DEFINITION', '#hidden', 'FUNCTION_BLOCK_TEMPLATE'];
+const GROUP_LAST = ['SCHEMA', 'LOCALE'];
+const EM_ALGS = new Set(['COMMAND_DRIVEN_ALGORITHM', 'STATE_DRIVEN_ALGORITHM']);
+const PREF = {
+  DEFINITION: ['FUNCTION_BLOCK_DEFINITION', 'FUNCTION_BLOCK_TEMPLATE', 'CHARM_TYPE_DEFINITION', 'MODULE_CLASS'],
+  DRIVE_FB: ['FUNCTION_BLOCK_DEFINITION', 'FUNCTION_BLOCK_TEMPLATE'],
+  STATE_FB: ['FUNCTION_BLOCK_DEFINITION', 'FUNCTION_BLOCK_TEMPLATE'],
+  TARGET_REACHED_FB: ['FUNCTION_BLOCK_DEFINITION', 'FUNCTION_BLOCK_TEMPLATE'],
+  MODULE: ['MODULE_INSTANCE', 'MODULE', 'SIF_MODULE', 'MODULE_CLASS'],
+  MODULE_CLASS: ['MODULE_CLASS'],
+  SET: ['ENUMERATION_SET', 'SIS_ENUMERATION_SET', 'SYSTEM_ENUMERATION_SET', 'SIS_SYSTEM_ENUMERATION_SET'],
+  PLANT_AREA: ['PLANT_AREA', 'BATCH_EQUIPMENT_PROCESS_CELL', 'BATCH_EQUIPMENT_UNIT_MODULE', 'PROCESS_CELL', 'UNIT_MODULE'],
+};
+PREF.COMMAND_SET = PREF.STATE_SET = PREF.NAMED_SET = PREF.ENUMERATION_SET = PREF.SET;
+const FB_KEYS = new Set(['DEFINITION', 'DRIVE_FB', 'STATE_FB', 'TARGET_REACHED_FB']);
+
+const S = {
+  fileName: '', baseName: '', enc: '', size: 0, eolStyle: '', warns: [],
+  ents: [], N: 0, explicit: null, eff: null, out: [], inn: [], hidden: null, locked: null,
+  typeOrder: [], view: [], sort: { k: 'idx', dir: 1 }, filterType: null, q: '',
+  showHidden: false, keepOrphans: false, sel: -1, tab: 'item', external: [], lastPos: -1,
+  previewFor: -1, previewText: null,
+};
+
+/* ===================== Load ===================== */
+function busy(msg, p) {
+  $('#busy').classList.toggle('show', msg != null);
+  if (msg != null) { $('#busyMsg').textContent = msg; $('#busyBar').style.width = Math.round((p || 0) * 100) + '%'; }
+}
+engine.on((d) => { if (d.ev === 'progress') busy('Reading file…', d.p); });
+
+async function openFile(file) {
+  if (!file) return;
+  if (/\.(prc|txt)$/i.test(file.name)) { const t = await file.text(); openRules(t, file.name); return; }
+  busy('Reading ' + file.name + '…', 0);
+  try {
+    const d = await new Promise((res, rej) => {
+      const h = (m) => {
+        if (m.ev === 'loaded') { engine.off(h); res(m); }
+        else if (m.ev === 'error') { engine.off(h); rej(new Error(m.message)); }
+      };
+      engine.on(h);
+      engine.send({ cmd: 'load', file });
+    });
+    busy('Indexing references…', 1);
+    await new Promise(r => setTimeout(r, 20));
+    ingest(file.name, d);
+  } catch (e) {
+    alert('Could not read ' + file.name + ':\n' + e.message);
+  } finally { busy(null); }
+}
+
+function ingest(name, d) {
+  S.fileName = name; S.baseName = name.replace(/\.fhx$/i, '');
+  S.enc = d.enc; S.size = d.size; S.eolStyle = d.eolStyle; S.warns = d.warns;
+  const N = S.N = d.meta.length;
+  S.ents = d.meta.map((m, i) => {
+    const a = m.a;
+    const nm = a.NAME !== undefined ? a.NAME : a.TAG;
+    let id = nm;
+    if (id === undefined) {
+      id = Object.keys(a).filter(k => !['user', 'time', 'OOB'].includes(k)).map(k => k + '=' + a[k]).join(' ') || m.type;
+    }
+    const e = {
+      i, type: m.type, id, name: nm, a, refs: m.refs, bytes: m.bytes, alg: m.alg || '', using: m.using || null,
+      cat: a.CATEGORY || '', area: a.PLANT_AREA || '', cls: a.MODULE_CLASS || a.CLASS || '',
+      user: a.user || '', time: +a.time || 0, oob: a.OOB || '',
+      hidden: m.type === 'FUNCTION_BLOCK_DEFINITION' && HIDDEN_RE.test(nm || ''),
+    };
+    return e;
+  });
+  const byName = new Map();
+  for (const e of S.ents) if (e.name) { let l = byName.get(e.name); if (!l) byName.set(e.name, l = []); l.push(e.i); }
+  S.out = Array.from({ length: N }, () => []);
+  S.inn = Array.from({ length: N }, () => []);
+  for (const e of S.ents) {
+    const seen = new Set();
+    for (const [key, val] of e.refs) {
+      const c = byName.get(val);
+      if (!c) continue;
+      let cand = c.filter(t => t !== e.i && !/_ID$/.test(S.ents[t].type));
+      if (!cand.length) continue;
+      const pref = PREF[key];
+      let pick = null;
+      if (pref) for (const ty of pref) { const m = cand.filter(t => S.ents[t].type === ty); if (m.length) { pick = m; break; } }
+      if (!pick && key === 'CLASS') { const m = cand.filter(t => /CLASS$/.test(S.ents[t].type)); if (m.length) pick = m; }
+      for (const t of pick || cand) {
+        if (seen.has(t)) continue;
+        seen.add(t);
+        S.out[e.i].push({ t, key });
+        S.inn[t].push({ f: e.i, key });
+      }
+    }
+  }
+  S.hidden = Uint8Array.from(S.ents, e => e.hidden ? 1 : 0);
+  S.locked = Uint8Array.from(S.ents, e => LOCKED_TYPES.has(e.type) ? 1 : 0);
+  S.explicit = new Uint8Array(N).fill(1);
+  S.eff = new Uint8Array(N);
+  S.ownerCache = new Map();
+  classify();
+  const seenT = new Set();
+  for (const e of S.ents) seenT.add(e.grp);
+  S.typeOrder = [...GROUP_FIRST.filter(k => seenT.has(k)),
+    ...[...seenT].filter(k => !GROUP_FIRST.includes(k) && !GROUP_LAST.includes(k)),
+    ...GROUP_LAST.filter(k => seenT.has(k))];
+  S.filterType = null; S.q = ''; $('#q').value = ''; S.sel = -1; S.lastPos = -1; S.previewFor = -1;
+  $('#drop').classList.add('hidden');
+  showVerify(null);
+  ['#btnRules', '#btnSave', '#btnReport'].forEach(s => $(s).disabled = false);
+  $('#fileinfo').innerHTML = '<b>' + esc(name) + '</b> · ' + fmtBytes(S.size) + ' · ' + N.toLocaleString() + ' items · ' +
+    S.enc.toUpperCase() + ' ' + S.eolStyle + (S.warns.length ? ' · <span style="color:var(--warn)">' + S.warns.length + ' parse warning(s)</span>' : '');
+  document.title = name + ' — ProcessFHX 3';
+  let auto = false;
+  try { auto = localStorage.getItem('pfhx3.auto') === '1' && !!localStorage.getItem('pfhx3.rules'); } catch (e) {}
+  if (auto) {
+    const log = applyRules(localStorage.getItem('pfhx3.rules'));
+    toast('Applied saved rules (' + log.filter(l => l.cls === 'w' || l.cls === 'e').length + ' warning(s)) — open Saved selections to review');
+  }
+  refresh(true);
+}
+
+// Sorts modules into equipment vs control modules and names each hidden definition after the blocks that use it.
+function classify() {
+  const classKind = (e) => /(^|\/)Equipment Module Classes(\/|$)/i.test(e.cat) ? 'EM'
+    : /(^|\/)Control Module Classes(\/|$)/i.test(e.cat) ? 'CM' : EM_ALGS.has(e.alg) ? 'EM' : 'CM';
+  for (const e of S.ents) if (e.type === 'MODULE_CLASS') e.kind = classKind(e);
+  for (const e of S.ents) {
+    if (e.type !== 'MODULE_INSTANCE' && e.type !== 'MODULE') continue;
+    const c = S.out[e.i].find(o => o.key === 'MODULE_CLASS' && S.ents[o.t].type === 'MODULE_CLASS');
+    e.kind = c ? S.ents[c.t].kind : EM_ALGS.has(e.alg) ? 'EM' : e.alg || e.type === 'MODULE' ? 'CM' : '';
+  }
+  const hidByName = new Map();
+  for (const e of S.ents) if (e.hidden) hidByName.set(e.name, e);
+  const resolve = (p, depth) => {
+    const s = p.indexOf('/'), head = s < 0 ? p : p.slice(0, s);
+    const h = depth < 8 && HIDDEN_RE.test(head) ? hidByName.get(head) : null;
+    return h && h.using && h.using.length ? resolve(h.using[0], depth + 1) + (s < 0 ? '' : p.slice(s)) : p;
+  };
+  for (const e of S.ents) {
+    if (e.hidden) {
+      e.paths = e.using ? e.using.map(p => resolve(p, 0)) : ownersOf(e.i).map(o => S.ents[o].id);
+      e.disp = e.paths.length ? e.paths[0].replace(/\//g, ' › ') + (e.paths.length > 1 ? '  +' + (e.paths.length - 1) + ' more' : '') : 'not used by anything in this file';
+    }
+    e.grp = e.hidden ? '#hidden' : e.kind ? e.type + '#' + e.kind : e.type;
+    e.lc = [e.type, e.id, e.paths ? e.paths.join(' ') : '', e.cat, e.area, e.cls, e.user,
+      e.kind === 'EM' ? 'equipment module' : e.kind === 'CM' ? 'control module' : ''].join(' ').toLowerCase();
+  }
+}
+
+/* ===================== Selection model ===================== */
+function recompute() {
+  const { N, eff, explicit, hidden, locked, out } = S;
+  eff.fill(0);
+  const stack = [];
+  for (let i = 0; i < N; i++) {
+    if (locked[i]) { eff[i] = 3; stack.push(i); }
+    else if (!hidden[i] && explicit[i]) { eff[i] = 1; stack.push(i); }
+  }
+  if (S.keepOrphans) for (let i = 0; i < N; i++) if (hidden[i]) eff[i] = 2;
+  while (stack.length) {
+    const i = stack.pop();
+    for (const { t } of out[i]) if (hidden[t] && eff[t] === 0) { eff[t] = 2; stack.push(t); }
+  }
+  const ext = new Map();
+  for (let i = 0; i < N; i++) {
+    if (!eff[i]) continue;
+    for (const { t, key } of out[i]) {
+      if (eff[t] || hidden[t]) continue;
+      let r = ext.get(t);
+      if (!r) ext.set(t, r = { t, by: [] });
+      if (r.by.length < 50) r.by.push({ f: i, key });
+      r.n = (r.n || 0) + 1;
+    }
+  }
+  S.external = [...ext.values()].sort((a, b) => cmpStr(S.ents[a.t].type, S.ents[b.t].type) || cmpStr(S.ents[a.t].id, S.ents[b.t].id));
+}
+function ownersOf(t) {
+  if (S.ownerCache.has(t)) return S.ownerCache.get(t);
+  const res = new Set(), seen = new Set([t]), st = [t];
+  while (st.length) {
+    const x = st.pop();
+    for (const { f } of S.inn[x]) {
+      if (seen.has(f)) continue;
+      seen.add(f);
+      if (S.hidden[f]) st.push(f); else res.add(f);
+    }
+  }
+  const arr = [...res];
+  S.ownerCache.set(t, arr);
+  return arr;
+}
+function setKeep(idxs, v) {
+  for (const i of idxs) if (!S.hidden[i] && !S.locked[i]) S.explicit[i] = v ? 1 : 0;
+  refresh();
+}
+
+/* ===================== Rules (.prc compatible) ===================== */
+const RULE_RE = /^(CATEGORY|NAME|USER|TYPE|PLANT_AREA|TAG|CLASS)\s+(=|Contains|Matches)\s+<(.*)>\s*,\s*<(True|False)>\s*,\s*<(Select|Deselect)>\s*$/i;
+function fieldOf(e, f) {
+  switch (f) {
+    case 'CATEGORY': return e.cat;
+    case 'NAME': return e.a.NAME !== undefined ? e.a.NAME : (e.a.TAG || '');
+    case 'TAG': return e.a.TAG || '';
+    case 'USER': return e.user;
+    case 'TYPE': return e.type;
+    case 'PLANT_AREA': return e.area;
+    case 'CLASS': return e.cls;
+  }
+  return '';
+}
+function closure(keyFilter) {
+  let added = 0, changed = true;
+  while (changed) {
+    changed = false;
+    recompute();
+    for (let i = 0; i < S.N; i++) {
+      if (!S.eff[i]) continue;
+      for (const { t, key } of S.out[i]) {
+        if (S.eff[t] || S.hidden[t] || S.explicit[t]) continue;
+        if (keyFilter && !keyFilter(key, S.ents[t])) continue;
+        S.explicit[t] = 1; added++; changed = true;
+      }
+    }
+  }
+  return added;
+}
+function applyRules(text) {
+  const log = [];
+  const lines = String(text || '').split(/\r?\n/);
+  const targets = S.ents.filter(e => !e.hidden && !S.locked[e.i]);
+  lines.forEach((raw, ln) => {
+    const l = raw.trim();
+    if (!l || l.startsWith('#')) return;
+    const at = 'line ' + (ln + 1) + ': ';
+    if (/^SELECT_ALL$/i.test(l)) { targets.forEach(e => S.explicit[e.i] = 1); log.push({ t: at + 'SELECT_ALL' }); return; }
+    if (/^SELECT_NONE$/i.test(l)) { targets.forEach(e => S.explicit[e.i] = 0); log.push({ t: at + 'SELECT_NONE' }); return; }
+    if (/^REQD_FBS$/i.test(l)) {
+      const n = closure((key, t) => FB_KEYS.has(key) && /^FUNCTION_BLOCK_(DEFINITION|TEMPLATE)$/.test(t.type));
+      log.push({ t: at + 'REQD_FBS added ' + n }); return;
+    }
+    if (/^REQD_ALL$/i.test(l)) { const n = closure(null); log.push({ t: at + 'REQD_ALL added ' + n }); return; }
+    const m = l.match(RULE_RE);
+    if (!m) { log.push({ t: at + 'not understood: ' + l, cls: 'e' }); return; }
+    const f = m[1].toUpperCase(), op = m[2].toLowerCase(), cs = /^true$/i.test(m[4]), sel = /^select$/i.test(m[5]);
+    let val = m[3], test;
+    if (op === 'matches') {
+      let re;
+      try { re = new RegExp(val, cs ? '' : 'i'); } catch (err) { log.push({ t: at + 'bad regular expression: ' + err.message, cls: 'e' }); return; }
+      test = (s) => re.test(s);
+    } else {
+      if (!cs) val = val.toLowerCase();
+      test = op === '=' ? (s) => (cs ? s : s.toLowerCase()) === val : (s) => (cs ? s : s.toLowerCase()).includes(val);
+    }
+    let hits = 0, lockedHits = 0;
+    for (const e of S.ents) {
+      if (!test(fieldOf(e, f))) continue;
+      if (e.hidden) continue;
+      if (S.locked[e.i]) { lockedHits++; continue; }
+      S.explicit[e.i] = sel ? 1 : 0; hits++;
+    }
+    log.push({ t: at + l + '  →  ' + hits + ' item(s)' + (lockedHits ? ' (+' + lockedHits + ' always kept)' : ''), cls: hits || lockedHits ? '' : 'w' });
+  });
+  refresh();
+  return log;
+}
+function rulesFromSelection() {
+  recompute();
+  const out = ['# ProcessFHX 3 rules generated from ' + S.fileName + ' on ' + new Date().toISOString().slice(0, 16).replace('T', ' '),
+    '# Syntax: FIELD (=|Contains|Matches) <value>,<CaseSensitive True|False>,<Select|Deselect>', 'SELECT_NONE'];
+  for (const k of new Set(S.ents.map(e => e.type))) {
+    if (LOCKED_TYPES.has(k)) continue;
+    const list = S.ents.filter(e => e.type === k && !e.hidden);
+    const kept = list.filter(e => S.explicit[e.i]);
+    if (!kept.length) continue;
+    if (kept.length === list.length && list.length > 1) { out.push('TYPE = <' + k + '>,<True>,<Select>'); continue; }
+    for (const e of kept) {
+      if (e.a.TAG !== undefined && e.a.NAME === undefined) out.push('TAG = <' + e.a.TAG + '>,<True>,<Select>');
+      else if (e.a.NAME !== undefined) out.push('NAME = <' + e.a.NAME + '>,<True>,<Select>');
+      else out.push('TYPE = <' + k + '>,<True>,<Select>');
+    }
+  }
+  return [...new Set(out)].join('\r\n') + '\r\n';
+}
+
+/* ===================== Rendering ===================== */
+const COLS = [
+  { k: 'cb', label: '' }, { k: 'type', label: 'Type' }, { k: 'id', label: 'Name / Tag' },
+  { k: 'where', label: 'Category / Plant area' }, { k: 'cls', label: 'Class' }, { k: 'user', label: 'Modified by' },
+  { k: 'time', label: 'Modified' }, { k: 'bytes', label: 'Size' },
+];
+const ROWH = 28;
+function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+function cmpStr(a, b) { return a < b ? -1 : a > b ? 1 : 0; }
+function fmtBytes(b) { return b < 1024 ? b + ' B' : b < 1048576 ? (b / 1024).toFixed(b < 10240 ? 1 : 0) + ' KB' : (b / 1048576).toFixed(1) + ' MB'; }
+function fmtTime(t) {
+  if (!t) return '';
+  const d = new Date(t * 1000), p = (x) => String(x).padStart(2, '0');
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+}
+function typeLabel(k) { return k === '#hidden' ? 'Embedded composites & logic' : (FRIENDLY[k] || k.toLowerCase().replace(/_/g, ' ').replace(/^./, c => c.toUpperCase())); }
+
+function buildView() {
+  const words = S.q.toLowerCase().split(/\s+/).filter(Boolean);
+  const ft = S.filterType;
+  let v = [];
+  for (const e of S.ents) {
+    if (ft === '#hidden') { if (!e.hidden) continue; }
+    else {
+      if (e.hidden && !S.showHidden) continue;
+      if (ft && e.grp !== ft) continue;
+    }
+    if (words.length && !words.every(w => e.lc.includes(w))) continue;
+    v.push(e.i);
+  }
+  const { k, dir } = S.sort;
+  if (k !== 'idx') {
+    const get = {
+      type: e => e.type, id: e => (e.disp || e.id).toLowerCase(), where: e => (e.cat || e.area).toLowerCase(),
+      cls: e => e.cls.toLowerCase(), user: e => e.user.toLowerCase(), time: e => e.time, bytes: e => e.bytes,
+      cb: e => S.eff[e.i] ? 1 : 0,
+    }[k];
+    v.sort((a, b) => { const x = get(S.ents[a]), y = get(S.ents[b]); return (x < y ? -1 : x > y ? 1 : a - b) * dir; });
+  }
+  S.view = v;
+}
+
+function renderHead() {
+  $('#thead').innerHTML = '<div class="cb"><input type="checkbox" id="cbAll" title="Select or deselect every item shown in the list"></div>' +
+    COLS.slice(1).map(c => '<div data-k="' + c.k + '" class="c-' + c.k + (S.sort.k === c.k ? ' sorted' + (S.sort.dir < 0 ? ' desc' : '') : '') +
+    '"' + (c.k === 'bytes' ? ' style="text-align:right"' : '') + '>' + c.label + '</div>').join('');
+  if (S.N) setTri($('#cbAll'), S.view);
+}
+
+function renderRows() {
+  const sc = $('#scroller'), rows = $('#rows');
+  rows.style.height = S.view.length * ROWH + 'px';
+  $('#empty').hidden = S.view.length > 0 || !S.N;
+  const top = sc.scrollTop, h = sc.clientHeight || 600;
+  const a = Math.max(0, Math.floor(top / ROWH) - 8), b = Math.min(S.view.length, Math.ceil((top + h) / ROWH) + 8);
+  let html = '';
+  for (let p = a; p < b; p++) {
+    const i = S.view[p], e = S.ents[i], st = S.eff[i];
+    let cb;
+    if (e.hidden) {
+      const ow = ownersOf(i);
+      cb = '<span class="hidpill" title="Follows its owner: ' + esc(ow.slice(0, 5).map(o => S.ents[o].id).join(', ') || 'no owner in this file') + '">' + (st ? 'auto' : 'off') + '</span>';
+    } else if (S.locked[i]) cb = '<input type="checkbox" checked disabled title="Always kept — DeltaV needs this to import the file">';
+    else cb = '<input type="checkbox" data-cb="' + p + '"' + (st ? ' checked' : '') + '>';
+    html += '<div class="row' + (st ? '' : ' dropped') + (e.hidden ? ' hid' : '') + (i === S.sel ? ' sel' : '') + '" style="top:' + p * ROWH + 'px" data-i="' + i + '">' +
+      '<div class="cb">' + cb + '</div>' +
+      '<div class="ty c-type" title="' + esc(e.type) + '">' + esc(e.type) + (e.oob ? ' <span class="lock" title="Out-of-box DeltaV item (OOB=' + esc(e.oob) + ')">OOB</span>' : '') + '</div>' +
+      (e.hidden ? '<div class="id" title="' + esc(e.id + '\nUsed by: ' + e.paths.slice(0, 20).join(', ') + (e.paths.length > 20 ? ' …' : '')) + '">' + esc(e.disp) + ' <small>' + esc(e.id) + '</small></div>'
+        : '<div class="id" title="' + esc(e.id) + '">' + esc(e.id) + (e.kind ? ' <span class="kind ' + e.kind + '" title="' + (e.kind === 'EM' ? 'Equipment module' : 'Control module') + '">' + e.kind + '</span>' : '') + '</div>') +
+      '<div class="c-where" title="' + esc(e.cat || e.area) + '">' + esc(e.cat || e.area) + '</div>' +
+      '<div class="c-cls" title="' + esc(e.cls) + '">' + esc(e.cls) + '</div>' +
+      '<div class="c-user">' + esc(e.user) + '</div>' +
+      '<div class="num c-time" style="text-align:left">' + fmtTime(e.time) + '</div>' +
+      '<div class="num">' + fmtBytes(e.bytes) + '</div></div>';
+  }
+  rows.innerHTML = html;
+  $('#shown').textContent = S.view.length.toLocaleString() + ' shown';
+  setTri($('#cbAll'), S.view);
+}
+// Shows a checkbox as checked, unchecked or mixed for the selectable items in idxs.
+function setTri(cb, idxs) {
+  if (!cb) return;
+  let n = 0, k = 0;
+  for (const i of idxs) if (!S.hidden[i] && !S.locked[i]) { n++; if (S.explicit[i]) k++; }
+  cb.disabled = !n;
+  cb.checked = n > 0 && k === n;
+  cb.indeterminate = k > 0 && k < n;
+}
+
+function renderTypes() {
+  const cnt = new Map();
+  let all = 0;
+  for (const e of S.ents) {
+    let c = cnt.get(e.grp); if (!c) cnt.set(e.grp, c = { n: 0, k: 0 });
+    c.n++; if (S.eff[e.i]) { c.k++; all++; }
+  }
+  let html = '<h3><span>Item types</span><span><button class="link" data-allv="1" title="Select every item in the file">Select all</button> · <button class="link" data-allv="0" title="Deselect every item in the file">None</button></span></h3>' +
+    '<div class="t' + (S.filterType ? '' : ' on') + '" data-type=""><input type="checkbox" data-tcb="*" title="Select or deselect every item in the file"><span class="nm">All items</span><span class="ct">' +
+    all.toLocaleString() + '/' + S.N.toLocaleString() + '</span></div>';
+  for (const k of S.typeOrder) {
+    const c = cnt.get(k);
+    const locked = LOCKED_TYPES.has(k), hid = k === '#hidden', raw = k.replace(/#.*/, '');
+    const box = hid ? '<span class="hidpill" title="Kept automatically with the classes and modules that use them">auto</span>'
+      : '<input type="checkbox" data-tcb="' + esc(k) + '"' + (c.k === c.n ? ' checked' : '') + (locked ? ' disabled title="Always kept"' : ' title="Select or deselect all ' + esc(typeLabel(k)) + '"') + (c.k && c.k < c.n ? ' data-ind="1"' : '') + '>';
+    html += '<div class="t' + (S.filterType === k ? ' on' : '') + '" data-type="' + esc(k) + '">' + box +
+      '<span class="nm" title="' + esc(hid ? 'Hidden FUNCTION_BLOCK_DEFINITION __XXXXXXXX_XXXXXXXX__ items: the private logic inside classes and modules' : raw) + '">' + esc(typeLabel(k)) + '<small>' + esc(hid ? '__XXXXXXXX_XXXXXXXX__' : raw) + '</small></span>' +
+      '<span class="ct">' + c.k.toLocaleString() + '/' + c.n.toLocaleString() + '</span></div>';
+  }
+  $('#types').innerHTML = html;
+  $('#types').querySelectorAll('[data-ind]').forEach(x => x.indeterminate = true);
+  setTri($('#types [data-tcb="*"]'), S.ents.map(e => e.i));
+}
+
+function renderSummary() {
+  let k = 0, kb = 0, tb = 0, ext = S.external.filter(x => !S.ents[x.t].oob).length;
+  for (let i = 0; i < S.N; i++) { tb += S.ents[i].bytes; if (S.eff[i]) { k++; kb += S.ents[i].bytes; } }
+  $('#summary').innerHTML = 'Keeping <b class="k">' + k.toLocaleString() + '</b> of ' + S.N.toLocaleString() + ' items · ' + fmtBytes(kb) + ' of ' + fmtBytes(tb);
+  const b = $('#checkbadge');
+  b.className = 'small' + (S.N ? ' show' : '');
+  b.innerHTML = ext ? '<span style="color:var(--warn)">⚠ ' + ext + ' referenced item' + (ext > 1 ? 's' : '') + ' not included</span>' : '<span style="color:var(--keep)">✓ Export check</span>';
+  $('#tabs [data-tab=check]').textContent = 'Export check' + (ext ? ' (' + ext + ')' : '');
+}
+
+function refRow(t, via, extra) {
+  const e = S.ents[t], st = S.eff[t];
+  const dot = e.hidden ? 'h' : st ? 'k' : e.oob ? 'b' : 'd';
+  const tip = e.hidden ? 'Hidden definition (follows owner)' : st ? 'Included' : e.oob ? 'Built-in DeltaV item, not included' : 'Not included';
+  return '<div class="ref"><span class="dot ' + dot + '" title="' + tip + '"></span><span class="nm"><button class="link" data-go="' + t + '">' + esc(e.hidden ? e.disp : e.id) +
+    '</button><small>' + esc(e.hidden ? e.id : e.type) + '</small>' + (e.kind ? '<span class="kind ' + e.kind + '">' + e.kind + '</span>' : '') + (extra || '') + '</span><span class="via">' + esc(via || '') + '</span></div>';
+}
+
+function renderPane() {
+  const pane = $('#pane');
+  document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === S.tab));
+  if (!S.N) { pane.innerHTML = '<p class="muted">Open an FHX file to begin.</p>'; return; }
+  if (S.tab === 'check') { pane.innerHTML = checkHtml(); return; }
+  const i = S.sel;
+  if (i < 0) { pane.innerHTML = '<p class="muted">Click an item to see what it uses and what uses it.</p>' + fileHtml(); return; }
+  const e = S.ents[i], st = S.eff[i];
+  let h = e.hidden
+    ? '<h2>' + esc(e.paths.length ? e.paths[0].replace(/\//g, ' › ') : e.id) + '</h2><div class="mono muted" style="margin-bottom:8px">Embedded composite / hidden definition · ' + esc(e.id) + '</div>'
+    : '<h2>' + esc(e.id) + '</h2><div class="mono muted" style="margin-bottom:8px">' + esc(e.type) + (e.kind ? ' · ' + (e.kind === 'EM' ? 'Equipment module' : 'Control module') : '') + '</div>';
+  h += st === 3 ? '<span class="chip keep">Always kept</span>' : st === 2 ? '<span class="chip hid">Kept with owner</span>' : st ? '<span class="chip keep">Kept</span>' : '<span class="chip drop">Dropped</span>';
+  if (!e.hidden && !S.locked[i]) h += ' <button class="small" data-toggle="' + i + '">' + (st ? 'Drop' : 'Keep') + '</button>';
+  h += '<h4>Properties</h4><table class="kv">';
+  const rows = [['Category', e.cat], ['Plant area', e.area], ['Class', e.cls], ['Modified by', e.user], ['Modified', fmtTime(e.time)], ['Size', fmtBytes(e.bytes)], ['Out-of-box', e.oob ? 'OOB=' + e.oob : '']];
+  for (const [k, v] of Object.entries(e.a)) if (!['NAME', 'TAG', 'CATEGORY', 'PLANT_AREA', 'MODULE_CLASS', 'CLASS', 'user', 'time', 'OOB'].includes(k)) rows.push([k, v]);
+  for (const [k, v] of rows) if (v !== '' && v !== undefined) h += '<tr><td>' + esc(k) + '</td><td>' + esc(v) + '</td></tr>';
+  h += '</table>';
+  if (e.hidden) {
+    const ow = ownersOf(i);
+    h += '<h4>Owned by</h4>' + (ow.length ? ow.map(o => refRow(o, '')).join('') : '<p class="muted">Nothing in this file uses it. It is dropped unless you keep all hidden definitions (Export check).</p>');
+    if (e.using && e.paths.length) h += '<h4>Used by these blocks (' + e.paths.length + ')</h4><div class="mono" style="font-size:12px">' + e.paths.slice(0, 200).map(p => esc(p.replace(/\//g, ' › '))).join('<br>') + (e.paths.length > 200 ? '<br>…' : '') + '</div>';
+  }
+  const outs = S.out[i], hid = outs.filter(o => S.hidden[o.t]), vis = outs.filter(o => !S.hidden[o.t]);
+  const missing = vis.filter(o => !S.eff[o.t] && !S.ents[o.t].oob);
+  h += '<h4><span>Uses (' + vis.length + ')</span>' + (st && missing.length ? '<button class="small" data-incl="' + i + '">Include ' + missing.length + ' missing</button>' : '') + '</h4>';
+  h += vis.length ? vis.sort((a, b) => cmpStr(S.ents[a.t].type, S.ents[b.t].type)).map(o => refRow(o.t, o.key)).join('') : '<p class="muted">No references to other items in this file.</p>';
+  if (hid.length) {
+    let total = new Set(), st2 = hid.map(o => o.t);
+    while (st2.length) { const x = st2.pop(); if (total.has(x)) continue; total.add(x); S.out[x].forEach(o => S.hidden[o.t] && st2.push(o.t)); }
+    h += '<h4>Embedded composites & logic (' + total.size + ')</h4><p class="muted" style="margin:0 0 4px">Carried along automatically: ' + hid.length + ' used directly' + (total.size > hid.length ? ', ' + (total.size - hid.length) + ' nested' : '') + '.</p>' +
+      [...total].slice(0, 200).map(t => refRow(t, '')).join('');
+  }
+  const ins = S.inn[i];
+  h += '<h4>Used by (' + ins.length + ')</h4>';
+  h += ins.length ? ins.slice(0, 300).map(o => refRow(o.f, o.key)).join('') + (ins.length > 300 ? '<p class="muted">…and ' + (ins.length - 300) + ' more</p>' : '') : '<p class="muted">Nothing in this file references it.</p>';
+  h += '<h4><span>FHX text</span>' + (S.previewFor === i ? '' : '<button class="small" data-preview="' + i + '">Show</button>') + '</h4>';
+  if (S.previewFor === i) h += S.previewText == null ? '<p class="muted">Loading…</p>' : '<pre class="raw">' + esc(S.previewText) + '</pre>';
+  pane.innerHTML = h;
+}
+
+function fileHtml() {
+  let h = '<h4>File</h4><table class="kv"><tr><td>Name</td><td>' + esc(S.fileName) + '</td></tr><tr><td>Size</td><td>' + fmtBytes(S.size) +
+    '</td></tr><tr><td>Encoding</td><td>' + S.enc.toUpperCase() + ', ' + S.eolStyle + '</td></tr><tr><td>Items</td><td>' + S.N.toLocaleString() +
+    ' (' + S.hidden.reduce((a, b) => a + b, 0) + ' hidden definitions)</td></tr></table>';
+  return h;
+}
+
+function checkHtml() {
+  const need = S.external.filter(x => !S.ents[x.t].oob), builtin = S.external.filter(x => S.ents[x.t].oob);
+  let h = '';
+  if (need.length) {
+    h += '<div class="callout"><b>' + need.length + ' item' + (need.length > 1 ? 's are' : ' is') + ' referenced but not included.</b> These must already exist in the target database, or the import will fail or leave unresolved references.</div>';
+    h += '<div style="display:flex;gap:6px;margin:8px 0"><button class="small" data-inclall="1">Include all of these</button><button class="small" data-inclall="2" title="Include them, then anything they need, and so on">Include all, recursively</button></div>';
+    for (const x of need) {
+      const e = S.ents[x.t];
+      const users = [...new Set(x.by.flatMap(b => S.hidden[b.f] ? ownersOf(b.f).filter(o => S.eff[o]) : [b.f]))];
+      const by = users.slice(0, 3).map(f => '<button class="link" data-go="' + f + '">' + esc(S.ents[f].id) + '</button>').join(', ') + (users.length > 3 ? ' +' + (users.length - 3) : '');
+      h += '<div class="need"><div><button class="link" data-go="' + x.t + '">' + esc(e.id) + '</button> <span class="mono muted" style="font-size:11px">' + esc(e.type) + '</span><div class="by">used by ' + by + ' via ' + esc([...new Set(x.by.map(b => b.key))].join(', ')) + '</div></div><button class="small" data-keep="' + x.t + '">Include</button></div>';
+    }
+  } else h += '<div class="callout ok"><b>No missing references.</b> Everything the kept items use is either included or a built-in DeltaV item.</div>';
+  if (builtin.length) h += '<h4>Built-in DeltaV items referenced (' + builtin.length + ')</h4><p class="muted" style="margin:0">Out-of-box items such as standard function block templates exist in every DeltaV database, so they are not needed in the file: ' + esc(builtin.slice(0, 40).map(x => S.ents[x.t].id).join(', ')) + (builtin.length > 40 ? '…' : '') + '</p>';
+  let hk = 0, hd = 0, orphan = 0;
+  for (let i = 0; i < S.N; i++) if (S.hidden[i]) { S.eff[i] ? hk++ : hd++; if (!ownersOf(i).length) orphan++; }
+  h += '<h4>Hidden definitions</h4><p style="margin:0">' + hk + ' kept with their owners, ' + hd + ' dropped with theirs' + (orphan ? ' (' + orphan + ' have no owner in this file)' : '') + '.</p>';
+  h += '<label class="field"><input type="checkbox" id="keepOrphans"' + (S.keepOrphans ? ' checked' : '') + '> Keep every hidden definition, even if its owner is dropped (ProcessFHX2 behaviour)</label>';
+  if (S.warns.length) h += '<h4>Parse warnings (' + S.warns.length + ')</h4><div class="callout">' + S.warns.map(esc).join('<br>') + '</div>';
+  return h;
+}
+
+let rafPending = false;
+function refresh(full) {
+  recompute();
+  if (full) { S.ownerCache = new Map(); renderHead(); }
+  buildView();
+  renderTypes();
+  renderRows();
+  renderSummary();
+  renderPane();
+}
+function select(i, scroll) {
+  S.sel = i;
+  if (S.previewFor !== i) { S.previewFor = -1; S.previewText = null; }
+  S.tab = 'item';
+  if (window.innerWidth <= 1100) $('#main').classList.add('mdetail');
+  if (scroll) {
+    let p = S.view.indexOf(i);
+    if (p < 0) { S.filterType = null; S.q = ''; $('#q').value = ''; if (S.hidden[i]) S.showHidden = $('#showHidden').checked = true; buildView(); renderTypes(); p = S.view.indexOf(i); }
+    const sc = $('#scroller');
+    if (p >= 0 && (p * ROWH < sc.scrollTop || p * ROWH > sc.scrollTop + sc.clientHeight - ROWH)) sc.scrollTop = p * ROWH - sc.clientHeight / 2;
+  }
+  renderRows(); renderPane();
+}
+
+/* ===================== Save / export ===================== */
+async function saveBlob(blob, name, desc, ext) {
+  if (window.showSaveFilePicker) {
+    try {
+      const h = await window.showSaveFilePicker({ suggestedName: name, types: [{ description: desc, accept: { 'application/octet-stream': [ext] } }] });
+      const ws = await h.createWritable(); await ws.write(blob); await ws.close();
+      return h.name;
+    } catch (e) { if (e.name === 'AbortError') return null; }
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+  return name;
+}
+function openSave() {
+  if (!S.N) return;
+  recompute();
+  const need = S.external.filter(x => !S.ents[x.t].oob).length;
+  let k = 0; for (let i = 0; i < S.N; i++) if (S.eff[i]) k++;
+  $('#saveSummary').innerHTML = '<p style="margin-top:0">Saving <b>' + k.toLocaleString() + '</b> of ' + S.N.toLocaleString() + ' items as ' + S.enc.toUpperCase() + '.</p>' +
+    (need ? '<div class="callout">⚠ ' + need + ' referenced item' + (need > 1 ? 's are' : ' is') + ' not included. They must already exist in the target database. <button class="link" id="seeCheck">Review</button></div>' : '') +
+    removalHtml();
+  $('#saveName').value = S.baseName + '_clean.fhx';
+  $('#removedName').textContent = S.baseName + '_removed.fhx';
+  $('#dlgSave').showModal();
+  const sc = $('#seeCheck'); if (sc) sc.onclick = () => { $('#dlgSave').close(); S.tab = 'check'; renderPane(); };
+}
+// Lists what the save will leave out, by group, so an accidental removal stands out before saving.
+function removalHtml() {
+  const g = new Map();
+  for (const e of S.ents) {
+    let r = g.get(e.grp); if (!r) g.set(e.grp, r = { n: 0, off: [] });
+    r.n++; if (!S.eff[e.i]) r.off.push(e);
+  }
+  const groups = S.typeOrder.filter(k => g.get(k).off.length);
+  if (!groups.length) return '<h4 class="rmh">What\'s being removed</h4><p class="muted" style="margin:0">Nothing. Every item is kept.</p>';
+  return '<h4 class="rmh">What\'s being removed</h4><table class="rm">' + groups.map(k => {
+    const r = g.get(k), all = r.off.length === r.n;
+    const names = k === '#hidden' ? '<span class="muted">Follow the classes and modules that use them</span>'
+      : r.off.slice(0, 12).map(e => esc(e.id)).join(', ') + (r.off.length > 12 ? ' <span class="muted">+' + (r.off.length - 12) + ' more</span>' : '');
+    return '<tr><td>' + esc(typeLabel(k)) + '</td><td class="ct">' + (all ? 'all ' + r.n : r.off.length + ' of ' + r.n) + '</td><td>' + names + '</td></tr>';
+  }).join('') + '</table>';
+}
+function showVerify(r, name) {
+  const el = $('#verifyMsg');
+  if (!r) { el.hidden = true; return; }
+  el.hidden = false;
+  if (r.problems.length) {
+    el.className = 'bad';
+    el.textContent = '⚠ Check failed for ' + name;
+    el.title = r.problems.join('\n');
+    alert('The saved file ' + name + ' did not pass the check:\n\n• ' + r.problems.join('\n• ') + '\n\nDo not import it. Please report this.');
+  } else {
+    el.className = 'good';
+    el.textContent = '✓ Verified ' + name;
+    el.title = 'Re-read the saved file: it parses cleanly, holds exactly the ' + r.found.toLocaleString() + ' selected items in order, ' +
+      'each identical to the source, with the same encoding' + (r.user ? ' (headers compared apart from user=)' : '') + '.';
+  }
+}
+async function doSave() {
+  const user = $('#replUser').checked ? $('#replUserVal').value.trim() : null;
+  if (user !== null && (!user || /["\r\n]/.test(user))) { alert('Enter a user name without quotes.'); return; }
+  const name = $('#saveName').value.trim() || S.baseName + '_clean.fhx';
+  $('#dlgSave').close();
+  const keep = Uint8Array.from(S.eff, v => v ? 1 : 0);
+  busy('Writing file…', 1);
+  try {
+    const r = await engineCall({ cmd: 'build', keep, user }, 'built');
+    busy(null);
+    const saved = await saveBlob(r.blob, /\.fhx$/i.test(name) ? name : name + '.fhx', 'DeltaV export', '.fhx');
+    if (saved && $('#saveRemoved').checked) {
+      const rem = Uint8Array.from(S.eff, (v, i) => S.locked[i] || !v ? 1 : 0);
+      const r2 = await engineCall({ cmd: 'build', keep: rem, user: null }, 'built');
+      await saveBlob(r2.blob, S.baseName + '_removed.fhx', 'DeltaV export', '.fhx');
+    }
+    if (saved) {
+      busy('Checking the saved file…', 1);
+      const v = (await engineCall({ cmd: 'verify', blob: r.blob, keep, user }, 'verified')).result;
+      busy(null);
+      v.user = user !== null;
+      showVerify(v, saved);
+      if (!v.problems.length) toast('Saved and verified ' + saved + ' (' + v.found.toLocaleString() + ' items, ' + fmtBytes(r.blob.size) + ')');
+    }
+  } catch (e) { busy(null); alert('Save failed: ' + e.message); }
+}
+async function saveReport() {
+  recompute();
+  const q = (s) => /[",\r\n]/.test(s) ? '"' + String(s).replace(/"/g, '""') + '"' : String(s);
+  const lines = [['Type', 'Kind', 'Name/Tag', 'Used by blocks', 'Category', 'Plant area', 'Class', 'Modified by', 'Modified', 'Bytes', 'Included', 'Reason', 'Referenced but not included'].join(',')];
+  for (const e of S.ents) {
+    const st = S.eff[e.i];
+    const reason = st === 3 ? 'Always kept' : st === 2 ? 'Hidden definition of ' + ownersOf(e.i).map(o => S.ents[o].id).join(' ') : st ? 'Selected' : e.hidden ? 'Owner dropped' : 'Not selected';
+    const miss = st ? S.out[e.i].filter(o => !S.eff[o.t] && !S.hidden[o.t] && !S.ents[o.t].oob).map(o => S.ents[o.t].id).join(' ') : '';
+    const kind = e.hidden ? 'Embedded' : e.kind === 'EM' ? 'Equipment module' : e.kind === 'CM' ? 'Control module' : '';
+    lines.push([e.type, kind, e.id, e.hidden ? e.paths.join(' ') : '', e.cat, e.area, e.cls, e.user, fmtTime(e.time), e.bytes, st ? 'Y' : 'N', reason, miss].map(q).join(','));
+  }
+  await saveBlob(new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv' }), S.baseName + '_report.csv', 'CSV', '.csv');
+}
+
+/* ===================== Rules dialog ===================== */
+function openRules(text, from) {
+  let t = text;
+  if (t == null) { try { t = localStorage.getItem('pfhx3.rules') || ''; } catch (e) { t = ''; } }
+  $('#rulesText').value = t;
+  try { $('#autoApply').checked = localStorage.getItem('pfhx3.auto') === '1'; } catch (e) {}
+  $('#rulesLog').hidden = true;
+  if (!$('#dlgRules').open) $('#dlgRules').showModal();
+  if (from) toast('Loaded ' + from + (S.N ? ' — press Apply' : ' — open an FHX file, then press Apply'));
+}
+function showLog(log) {
+  const el = $('#rulesLog');
+  el.hidden = false;
+  el.innerHTML = log.map(l => '<div class="' + (l.cls || '') + '">' + esc(l.t) + '</div>').join('') || 'No rules.';
+}
+
+/* ===================== Events ===================== */
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('show'), 3500); }
+
+$('#btnOpen').onclick = $('#btnOpen2').onclick = () => $('#fileIn').click();
+$('#fileIn').onchange = (e) => { openFile(e.target.files[0]); e.target.value = ''; };
+$('#btnHelp').onclick = () => $('#dlgHelp').showModal();
+$('#btnRules').onclick = () => openRules();
+$('#btnSave').onclick = openSave;
+$('#btnDoSave').onclick = doSave;
+$('#btnReport').onclick = saveReport;
+document.querySelectorAll('dialog [data-close]').forEach(b => b.onclick = () => b.closest('dialog').close());
+
+$('#btnLoadPrc').onclick = () => $('#prcIn').click();
+$('#prcIn').onchange = async (e) => { const f = e.target.files[0]; if (f) { $('#rulesText').value = await f.text(); toast('Loaded ' + f.name); } e.target.value = ''; };
+$('#btnApplyRules').onclick = () => {
+  if (!S.N) { toast('Open an FHX file first'); return; }
+  const t = $('#rulesText').value;
+  try { localStorage.setItem('pfhx3.rules', t); } catch (e) {}
+  showLog(applyRules(t));
+};
+$('#btnFromSel').onclick = () => { if (S.N) $('#rulesText').value = rulesFromSelection(); };
+$('#btnSavePrc').onclick = () => {
+  const t = $('#rulesText').value.replace(/\r?\n/g, '\r\n');
+  try { localStorage.setItem('pfhx3.rules', $('#rulesText').value); } catch (e) {}
+  saveBlob(new Blob([t], { type: 'text/plain' }), (S.baseName || 'rules') + '.prc', 'ProcessFHX procedure', '.prc');
+};
+function setTheme(t) {
+  if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+  else { delete document.documentElement.dataset.theme; t = 'auto'; }
+  try { localStorage.setItem('pfhx3.theme', t); } catch (e) {}
+  $('#btnTheme').textContent = 'Theme: ' + t[0].toUpperCase() + t.slice(1);
+}
+$('#btnTheme').onclick = () => {
+  const cur = document.documentElement.dataset.theme || 'auto';
+  setTheme({ auto: 'light', light: 'dark', dark: 'auto' }[cur]);
+};
+setTheme(document.documentElement.dataset.theme || 'auto');
+function setSide(px) {
+  if (px == null) document.documentElement.style.removeProperty('--side');
+  else document.documentElement.style.setProperty('--side', Math.round(Math.max(150, Math.min(px, window.innerWidth * 0.5))) + 'px');
+  try { px == null ? localStorage.removeItem('pfhx3.side') : localStorage.setItem('pfhx3.side', String(Math.round(px))); } catch (e) {}
+}
+try { const w = +localStorage.getItem('pfhx3.side'); if (w) setSide(w); } catch (e) {}
+$('#grip').addEventListener('pointerdown', (e) => {
+  const g = e.currentTarget, x0 = e.clientX, w0 = $('#types').getBoundingClientRect().width;
+  g.setPointerCapture(e.pointerId); g.classList.add('drag'); document.body.classList.add('resizing');
+  const move = (ev) => setSide(w0 + ev.clientX - x0);
+  const up = () => { g.removeEventListener('pointermove', move); g.classList.remove('drag'); document.body.classList.remove('resizing'); renderRows(); };
+  g.addEventListener('pointermove', move);
+  g.addEventListener('pointerup', up, { once: true });
+  g.addEventListener('pointercancel', up, { once: true });
+});
+$('#grip').ondblclick = () => setSide(null);
+$('#autoApply').onchange = (e) => { try { localStorage.setItem('pfhx3.auto', e.target.checked ? '1' : '0'); localStorage.setItem('pfhx3.rules', $('#rulesText').value); } catch (err) {} };
+
+$('#q').oninput = (e) => { S.q = e.target.value; buildView(); $('#scroller').scrollTop = 0; renderRows(); };
+$('#showHidden').onchange = (e) => { S.showHidden = e.target.checked; buildView(); renderRows(); };
+$('#btnKeepShown').onclick = () => setKeep(S.view, 1);
+$('#btnDropShown').onclick = () => setKeep(S.view, 0);
+$('#btnOnlyShown').onclick = () => { const s = new Set(S.view); setKeep(S.ents.map(e => e.i).filter(i => !s.has(i)), 0); setKeep(S.view, 1); };
+$('#scroller').addEventListener('scroll', () => { if (!rafPending) { rafPending = true; requestAnimationFrame(() => { rafPending = false; renderRows(); }); } });
+window.addEventListener('resize', () => renderRows());
+
+$('#thead').onclick = (e) => {
+  if (e.target.id === 'cbAll') { setKeep(S.view, e.target.checked ? 1 : 0); return; }
+  const k = e.target.dataset.k;
+  if (!k) return;
+  if (S.sort.k === k) { if (S.sort.dir === 1) S.sort.dir = -1; else S.sort = { k: 'idx', dir: 1 }; } else S.sort = { k, dir: 1 };
+  renderHead(); buildView(); renderRows();
+};
+$('#rows').addEventListener('click', (e) => {
+  const cb = e.target.closest('[data-cb]');
+  if (cb) {
+    const p = +cb.dataset.cb, v = cb.checked ? 1 : 0;
+    if (e.shiftKey && S.lastPos >= 0) {
+      const a = Math.min(p, S.lastPos), b = Math.max(p, S.lastPos);
+      setKeep(S.view.slice(a, b + 1), v);
+    } else setKeep([S.view[p]], v);
+    S.lastPos = p;
+    return;
+  }
+  const row = e.target.closest('.row');
+  if (row) select(+row.dataset.i);
+});
+$('#types').addEventListener('click', (e) => {
+  const av = e.target.closest('[data-allv]');
+  if (av) { setKeep(S.ents.map(x => x.i), +av.dataset.allv); return; }
+  const cb = e.target.closest('[data-tcb]');
+  if (cb) {
+    const k = cb.dataset.tcb;
+    setKeep(S.ents.filter(x => (k === '*' || x.grp === k) && !x.hidden).map(x => x.i), cb.checked ? 1 : 0);
+    return;
+  }
+  const t = e.target.closest('[data-type]');
+  if (!t) return;
+  const k = t.dataset.type || null;
+  S.filterType = S.filterType === k ? null : k;
+  $('#scroller').scrollTop = 0;
+  buildView(); renderTypes(); renderRows();
+});
+$('#tabs').onclick = (e) => {
+  if (e.target.id === 'closeDetail') { $('#main').classList.remove('mdetail'); return; }
+  const t = e.target.dataset.tab; if (t) { S.tab = t; renderPane(); }
+};
+$('#checkbadge').onclick = () => { S.tab = 'check'; if (window.innerWidth <= 1100) $('#main').classList.add('mdetail'); renderPane(); };
+$('#pane').addEventListener('click', async (e) => {
+  const d = e.target.dataset;
+  if (d.go !== undefined) select(+d.go, true);
+  else if (d.toggle !== undefined) setKeep([+d.toggle], S.eff[+d.toggle] ? 0 : 1);
+  else if (d.keep !== undefined) setKeep([+d.keep], 1);
+  else if (d.incl !== undefined) { const i = +d.incl; setKeep(S.out[i].filter(o => !S.eff[o.t] && !S.hidden[o.t] && !S.ents[o.t].oob).map(o => o.t), 1); }
+  else if (d.inclall !== undefined) {
+    if (d.inclall === '2') { const n = closure((k, t) => !t.oob); refresh(); toast('Included ' + n + ' item(s)'); }
+    else setKeep(S.external.filter(x => !S.ents[x.t].oob).map(x => x.t), 1);
+  } else if (d.preview !== undefined) {
+    const i = +d.preview; S.previewFor = i; S.previewText = null; renderPane();
+    const r = await engineCall({ cmd: 'preview', i }, 'preview');
+    if (S.previewFor === i) { S.previewText = r.text.replace(/\r\n?/g, '\n') + (r.cut ? '\n… (truncated)' : ''); renderPane(); }
+  }
+});
+$('#pane').addEventListener('change', (e) => { if (e.target.id === 'keepOrphans') { S.keepOrphans = e.target.checked; refresh(); } });
+
+document.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); openSave(); }
+  else if (e.key === '/' && !/INPUT|TEXTAREA/.test(document.activeElement.tagName) && !document.querySelector('dialog[open]')) { e.preventDefault(); $('#q').focus(); }
+  else if (e.key === 'Escape' && window.innerWidth <= 1100) $('#main').classList.remove('mdetail');
+});
+['dragenter', 'dragover'].forEach(ev => window.addEventListener(ev, (e) => { e.preventDefault(); $('#drop').classList.add('over'); if (S.N && e.dataTransfer.types.includes('Files')) $('#drop').classList.remove('hidden'); }));
+['dragleave', 'drop'].forEach(ev => window.addEventListener(ev, (e) => {
+  e.preventDefault();
+  if (ev === 'dragleave' && e.relatedTarget) return;
+  $('#drop').classList.remove('over');
+  if (S.N) $('#drop').classList.add('hidden');
+}));
+window.addEventListener('drop', (e) => { const f = e.dataTransfer.files[0]; if (f) openFile(f); });
+
+renderHead(); renderPane(); renderSummary();
+window.ProcessFHX = { S, openFile, applyRules, recompute, engineCall };
+</script>
+</body>
+</html>

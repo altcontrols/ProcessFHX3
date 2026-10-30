@@ -1,0 +1,10 @@
+# DeltaV exports are client configuration - never commit them
+*.fhx
+*.FHX
+
+# Old ProcessFHX2 installer binaries (2013)
+*.msi
+*.wixpdb
+*.cab
+
+.DS_Store
