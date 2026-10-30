@@ -22,11 +22,12 @@ Nothing to install, no internet needed, and nothing is uploaded: the file is rea
 1. **Open the export.** Everything starts as selected (kept).
 2. **Choose what to keep:**
    - **Left pane:** each group's checkbox selects or deselects the whole group. **Select all** / **None** at the top select or deselect everything in the file.
-   - **Main list:** tick or untick single items. Shift-click selects or deselects a range. The checkbox at the top of the list selects or deselects everything currently shown.
+   - **Main list:** tick or untick single items. Shift-click on a checkbox sets a range. The checkbox at the top of the list selects or deselects everything currently shown.
+   - **Highlight a block of rows:** click a row, then Shift-click another to highlight everything between them (Ctrl/⌘-click adds or removes single rows; Shift+arrows extend from the keyboard; Ctrl/⌘+A highlights every row shown). Then press **Select highlighted** or **Deselect highlighted**, or Space. Highlighting is just a way of pointing at rows; it doesn't change what's kept until you press one of those.
    - **Filter box:** type to narrow the list (by name, tag, category, plant area, class or user). Then use **Select shown** or **Deselect shown**. To keep only what's shown, click **None** in the left pane first, then **Select shown**.
    - Click a group name in the left pane to show only that group.
    - **Undo / Redo** (Ctrl/⌘+Z, Ctrl/⌘+Y) step back through every selection change, including Select all / None and applied rules.
-   - **Keyboard:** press ↓ in the filter box to jump into the list, then ↑ ↓ PgUp PgDn Home End move the highlight, Space ticks or unticks the item, and Enter opens its details.
+   - **Keyboard:** press ↓ in the filter box to jump into the list, then ↑ ↓ PgUp PgDn Home End move the highlight (hold Shift to extend it), Space ticks or unticks the highlighted item(s), and Enter opens the details.
 3. **Review with All / Selected / Removed** (the buttons above the list). **Selected** shows only what will be saved, **Removed** only what will be left out. Each shows a count, and the filter box and left pane still narrow the list.
 4. **Check the Export check tab** (right-hand panel, also the badge at the bottom). It lists everything your kept items reference but you've excluded. Those items must already exist in the target database, or the import will fail. Use **Include** to add any you need.
 5. **Save clean FHX…** (or Ctrl/⌘+S). The file is saved as `<name>_clean.fhx` by default.

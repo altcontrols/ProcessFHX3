@@ -2,6 +2,10 @@
 
 Versions are **major.minor**. Each release is tagged in git (`v1.0`, `v1.1`, …), and the version shows next to the title in the tool and in Help.
 
+## v1.3 — 2026-10-30
+
+- Highlight a block of rows (click, then Shift-click; Ctrl/⌘-click for single rows; Shift+arrows; Ctrl/⌘+A) and use the new **Select highlighted** / **Deselect highlighted** buttons, or Space, on all of them at once.
+
 ## v1.2 — 2026-10-30
 
 - **Undo / Redo** for every selection change (Ctrl+Z / Ctrl+Y, and toolbar buttons).

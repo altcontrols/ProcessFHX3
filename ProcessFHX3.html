@@ -113,6 +113,7 @@ body.resizing { cursor: col-resize; user-select: none; }
 .row { position: absolute; left: 0; right: 0; height: 28px; border-bottom: 1px solid var(--line); background: var(--panel); cursor: default; }
 .row:hover { background: var(--hover); }
 .row.sel { background: var(--sel); }
+.row.cur { box-shadow: inset 2px 0 0 var(--accent); }
 .row > div { padding: 0 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .row .cb { display: flex; justify-content: center; }
 .row.dropped > div:not(.cb) { opacity: .45; text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--drop) 60%, transparent); }
@@ -239,7 +240,7 @@ table.cmp td.n { text-align: right; font-variant-numeric: tabular-nums; white-sp
 <body>
 <div id="app">
   <header>
-    <h1>Process<span>FHX</span> 3<small class="ver">v1.2</small></h1>
+    <h1>Process<span>FHX</span> 3<small class="ver">v1.3</small></h1>
     <div id="fileinfo">No file loaded</div>
     <div class="actions">
       <button id="btnOpen">Open FHX…</button>
@@ -261,6 +262,8 @@ table.cmp td.n { text-align: right; font-variant-numeric: tabular-nums; white-sp
         <span id="shown" class="muted"></span>
         <button id="btnKeepShown" class="small" title="Select every item currently shown in the list">Select shown</button>
         <button id="btnDropShown" class="small" title="Deselect every item currently shown in the list">Deselect shown</button>
+        <button id="btnKeepMarked" class="small" disabled title="Tick the highlighted rows (click a row, then Shift-click another to highlight a range; Ctrl/⌘-click adds single rows)">Select highlighted</button>
+        <button id="btnDropMarked" class="small" disabled title="Untick the highlighted rows">Deselect highlighted</button>
         <button id="btnUndo" class="small" disabled title="Undo (Ctrl+Z)">↶ Undo</button>
         <button id="btnRedo" class="small" disabled title="Redo (Ctrl+Y)">↷ Redo</button>
       </div>
@@ -343,12 +346,12 @@ table.cmp td.n { text-align: right; font-variant-numeric: tabular-nums; white-sp
 </dialog>
 
 <dialog id="dlgHelp">
-  <div class="hd"><h3>ProcessFHX 3 v1.2 — Help</h3><button class="small" data-close>Close</button></div>
+  <div class="hd"><h3>ProcessFHX 3 v1.3 — Help</h3><button class="small" data-close>Close</button></div>
   <div class="bd" id="help">
     <h4>Workflow</h4>
     <ol>
       <li>Open a DeltaV export (<b>Open FHX…</b>, Ctrl/⌘ O, or drop the file on the page). Everything starts as <b>kept</b>. In Chrome and Edge the start screen lists your <b>recent files</b> for one-click reopening; the browser may ask once per file whether to allow it, and "Allow on every visit" stops it asking again.</li>
-      <li>Untick items, use the type list on the left (its checkbox selects or deselects a whole group; <b>Select all</b> / <b>None</b> sit at the top), tick the box at the top of the list to select or deselect everything shown, or filter and use <b>Select shown</b> / <b>Deselect shown</b>. Drag the left pane's edge, or the edge of any column heading, to resize it; double-click to reset.</li>
+      <li>Untick items, use the type list on the left (its checkbox selects or deselects a whole group; <b>Select all</b> / <b>None</b> sit at the top), tick the box at the top of the list to select or deselect everything shown, or filter and use <b>Select shown</b> / <b>Deselect shown</b>. To work on a block of rows, click one, Shift-click another (Ctrl/⌘-click adds single rows), then <b>Select highlighted</b> / <b>Deselect highlighted</b>. Drag the left pane's edge, or the edge of any column heading, to resize it; double-click to reset.</li>
       <li>Use <b>All / Selected / Removed</b> above the list to review exactly what will be saved or left out. <b>Undo</b> / <b>Redo</b> (Ctrl+Z / Ctrl+Y) step back through every selection change, so a stray <b>None</b> or <b>Select all</b> is harmless.</li>
       <li>Open <b>Export check</b> to see what the kept items reference but you've excluded. Those must already exist in the target database, or the import will fail.</li>
       <li><b>Save clean FHX</b>. The save dialog lists <b>what's being removed</b> so you can spot accidental drops. After saving, the file is re-read and checked automatically; <b>✓ Verified</b> appears at the bottom when it holds exactly your selection, unchanged. The Save dialog reopens the last folder you saved to; <b>Choose output folder…</b> in the save dialog sets a fixed one instead (Chrome and Edge). Optionally save the selection (<b>Saved selections → Save as .prc</b>) to repeat the same clean on the next export.</li>
@@ -379,7 +382,7 @@ TYPE = &lt;MODULE_CLASS&gt;,&lt;True&gt;,&lt;Select&gt;
 NAME Matches &lt;^EM0[13]-00$&gt;,&lt;True&gt;,&lt;Select&gt;
 CATEGORY Contains &lt;Control Module Classes&gt;,&lt;True&gt;,&lt;Deselect&gt;</pre>
     <h4>Shortcuts</h4>
-    <p><code>/</code> focus the filter · <code>↓</code> from the filter jumps into the list · <code>↑ ↓ PgUp PgDn Home End</code> move through the list · <code>Space</code> tick/untick the highlighted item · <code>Enter</code> open its details · <code>Ctrl/⌘ Z</code> / <code>Ctrl/⌘ Y</code> undo / redo · <code>Ctrl/⌘ O</code> open · <code>Ctrl/⌘ S</code> save · <code>Shift</code>-click a checkbox to set a range.</p>
+    <p><code>/</code> focus the filter · <code>↓</code> from the filter jumps into the list · <code>↑ ↓ PgUp PgDn Home End</code> move through the list · <code>Shift</code> with any of those extends the highlight · <code>Ctrl/⌘ A</code> highlight every row shown · <code>Space</code> tick/untick the highlighted item(s) · <code>Enter</code> open its details · <code>Ctrl/⌘ Z</code> / <code>Ctrl/⌘ Y</code> undo / redo · <code>Ctrl/⌘ O</code> open · <code>Ctrl/⌘ S</code> save · <code>Shift</code>-click a checkbox to set a range.</p>
   </div>
 </dialog>
 
@@ -754,6 +757,7 @@ const S = {
   typeOrder: [], view: [], sort: { k: 'idx', dir: 1 }, filterType: null, q: '',
   showHidden: false, manualHidden: false, stateFilter: "all", sel: -1, tab: 'item', external: [], lastPos: -1,
   side: 'types', filterPath: null, expanded: new Set(), tree: null,
+  marked: new Set(), anchor: -1,
   previewFor: -1, previewText: null,
 };
 
@@ -885,7 +889,7 @@ function ingest(name, d) {
   S.typeOrder = [...GROUP_FIRST.filter(k => seenT.has(k)),
     ...[...seenT].filter(k => !GROUP_FIRST.includes(k) && !GROUP_LAST.includes(k)),
     ...GROUP_LAST.filter(k => seenT.has(k))];
-  S.filterType = null; S.q = ''; $('#q').value = ''; S.manualHidden = false; setStateFilter('all', true); S.sel = -1; S.lastPos = -1; S.previewFor = -1;
+  S.filterType = null; S.q = ''; $('#q').value = ''; S.manualHidden = false; setStateFilter('all', true); S.sel = -1; S.lastPos = -1; S.previewFor = -1; S.marked = new Set(); S.anchor = -1;
   S.undo = []; S.redo = []; renderUndo();
   S.filterPath = null; S.expanded = new Set(['Library', 'System Configuration', 'System Configuration\u0001Control Strategies']); buildTree();
   $('#drop').classList.add('hidden');
@@ -1179,7 +1183,7 @@ function renderRows() {
       if (!st) cb = cb.replace('class="hidpill"', 'class="hidpill off"');
     } else if (S.locked[i]) cb = '<input type="checkbox" checked disabled title="Always kept — DeltaV needs this to import the file">';
     else cb = '<input type="checkbox" data-cb="' + p + '"' + (st ? ' checked' : '') + '>';
-    html += '<div class="row' + (st ? '' : ' dropped') + (e.hidden ? ' hid' : '') + (i === S.sel ? ' sel' : '') + '" style="top:' + p * ROWH + 'px" data-i="' + i + '">' +
+    html += '<div class="row' + (st ? '' : ' dropped') + (e.hidden ? ' hid' : '') + (S.marked.has(i) ? ' sel' : '') + (i === S.sel ? ' cur' : '') + '" style="top:' + p * ROWH + 'px" data-i="' + i + '">' +
       '<div class="cb">' + cb + '</div>' +
       '<div class="ty c-type" title="' + esc(e.type) + '">' + esc(e.type) + (e.oob ? ' <span class="lock" title="Out-of-box DeltaV item (OOB=' + esc(e.oob) + ')">OOB</span>' : '') + '</div>' +
       (e.hidden ? '<div class="id" title="' + esc(e.id + '\nUsed by: ' + e.paths.slice(0, 20).join(', ') + (e.paths.length > 20 ? ' …' : '')) + '">' + esc(e.disp) + ' <small>' + esc(e.id) + '</small></div>'
@@ -1191,7 +1195,8 @@ function renderRows() {
       '<div class="num">' + fmtBytes(e.bytes) + '</div></div>';
   }
   rows.innerHTML = html;
-  $('#shown').textContent = S.view.length.toLocaleString() + ' shown';
+  $('#shown').textContent = S.view.length.toLocaleString() + ' shown' + (S.marked.size > 1 ? ' · ' + S.marked.size.toLocaleString() + ' highlighted' : '');
+  $('#btnKeepMarked').disabled = $('#btnDropMarked').disabled = !S.marked.size;
   setTri($('#cbAll'), S.view);
 }
 // Shows a checkbox as checked, unchecked or mixed for the selectable items in idxs.
@@ -1435,7 +1440,18 @@ function refresh(full) {
   renderSummary();
   renderPane();
 }
-function select(i, scroll) {
+// Highlighting: a plain click highlights one row and anchors it. mode 'range' highlights from the
+// anchor to i (Shift), 'toggle' adds or removes i on its own (Ctrl/⌘). Highlighted rows are what
+// Select / Deselect highlighted act on; they are not the same as ticked rows.
+function select(i, scroll, mode) {
+  if (mode === 'range' && S.anchor >= 0) {
+    const a = S.view.indexOf(S.anchor), b = S.view.indexOf(i);
+    if (a >= 0 && b >= 0) S.marked = new Set(S.view.slice(Math.min(a, b), Math.max(a, b) + 1));
+    else { S.marked = new Set([i]); S.anchor = i; }
+  } else if (mode === 'toggle') {
+    S.marked.has(i) ? S.marked.delete(i) : S.marked.add(i);
+    S.anchor = i;
+  } else { S.marked = new Set([i]); S.anchor = i; }
   S.sel = i;
   if (S.previewFor !== i) { S.previewFor = -1; S.previewText = null; }
   S.tab = 'item';
@@ -1860,7 +1876,7 @@ $('#rows').addEventListener('click', (e) => {
     return;
   }
   const row = e.target.closest('.row');
-  if (row) { select(+row.dataset.i); $('#scroller').focus({ preventScroll: true }); }
+  if (row) { select(+row.dataset.i, false, e.shiftKey ? 'range' : e.ctrlKey || e.metaKey ? 'toggle' : null); $('#scroller').focus({ preventScroll: true }); }
 });
 $('#types').addEventListener('click', (e) => {
   const av = e.target.closest('[data-allv]');
@@ -1913,12 +1929,19 @@ $('#pane').addEventListener('click', async (e) => {
 $('#pane').addEventListener('change', (e) => { if (e.target.id === 'manualHidden') setManualHidden(e.target.checked); });
 
 // Moves the highlighted row by d, or to absolute position p, within the current view.
-function moveSel(d, p) {
+function moveSel(d, p, extend) {
   if (!S.view.length) return;
   if (p === undefined) { const c = S.view.indexOf(S.sel); p = c < 0 ? (d > 0 ? 0 : S.view.length - 1) : c + d; }
   p = Math.max(0, Math.min(S.view.length - 1, p));
-  select(S.view[p], true);
+  select(S.view[p], true, extend ? 'range' : null);
 }
+function setKeepMarked(v) {
+  const ids = [...S.marked].filter(selectable);
+  if (!ids.length) { toast('Nothing highlighted'); return; }
+  setKeep(ids, v);
+}
+$('#btnKeepMarked').onclick = () => setKeepMarked(1);
+$('#btnDropMarked').onclick = () => setKeepMarked(0);
 $('#btnUndo').onclick = undo; $('#btnRedo').onclick = redo;
 document.addEventListener('keydown', (e) => {
   const mod = e.ctrlKey || e.metaKey, k = e.key, inField = /INPUT|TEXTAREA/.test(document.activeElement.tagName), dlg = !!document.querySelector('dialog[open]');
@@ -1934,12 +1957,14 @@ document.addEventListener('keydown', (e) => {
   if (k === '/') { e.preventDefault(); $('#q').focus(); return; }
   if (!S.N) return;
   const page = Math.max(1, Math.floor($('#scroller').clientHeight / ROWH) - 1);
-  if (k === 'ArrowDown') { e.preventDefault(); moveSel(1); }
-  else if (k === 'ArrowUp') { e.preventDefault(); moveSel(-1); }
-  else if (k === 'PageDown') { e.preventDefault(); moveSel(page); }
-  else if (k === 'PageUp') { e.preventDefault(); moveSel(-page); }
-  else if (k === 'Home') { e.preventDefault(); moveSel(0, 0); }
-  else if (k === 'End') { e.preventDefault(); moveSel(0, S.view.length - 1); }
+  if (k === 'ArrowDown') { e.preventDefault(); moveSel(1, undefined, e.shiftKey); }
+  else if (k === 'ArrowUp') { e.preventDefault(); moveSel(-1, undefined, e.shiftKey); }
+  else if (k === 'PageDown') { e.preventDefault(); moveSel(page, undefined, e.shiftKey); }
+  else if (k === 'PageUp') { e.preventDefault(); moveSel(-page, undefined, e.shiftKey); }
+  else if (k === 'Home') { e.preventDefault(); moveSel(0, 0, e.shiftKey); }
+  else if (k === 'End') { e.preventDefault(); moveSel(0, S.view.length - 1, e.shiftKey); }
+  else if (mod && k.toLowerCase() === 'a') { e.preventDefault(); S.marked = new Set(S.view); renderRows(); }
+  else if (k === ' ' && S.marked.size > 1) { e.preventDefault(); const ids = [...S.marked].filter(selectable); setKeepMarked(ids.some(i => !S.explicit[i]) ? 1 : 0); }
   else if (k === ' ' && S.sel >= 0 && S.view.includes(S.sel)) { e.preventDefault(); if (selectable(S.sel)) setKeep([S.sel], S.explicit[S.sel] ? 0 : 1); else toast(S.locked[S.sel] ? 'Always kept' : 'Embedded composites follow their owner (see Export check for manual mode)'); }
   else if (k === 'Enter' && S.sel >= 0) { e.preventDefault(); select(S.sel); if (window.innerWidth <= 1100) $('#main').classList.add('mdetail'); }
 });
