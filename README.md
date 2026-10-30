@@ -21,7 +21,7 @@ Nothing to install, no internet needed, and nothing is uploaded: the file is rea
 2. **Choose what to keep:**
    - **Left pane:** each group's checkbox selects or deselects the whole group. **Select all** / **None** at the top select or deselect everything in the file.
    - **Main list:** tick or untick single items. Shift-click selects or deselects a range. The checkbox at the top of the list selects or deselects everything currently shown.
-   - **Filter box:** type to narrow the list (by name, tag, category, plant area, class or user). Then use **Select shown**, **Deselect shown** or **Only shown**, which selects what's shown and deselects everything else.
+   - **Filter box:** type to narrow the list (by name, tag, category, plant area, class or user). Then use **Select shown** or **Deselect shown**. To keep only what's shown, click **None** in the left pane first, then **Select shown**.
    - Click a group name in the left pane to show only that group.
 3. **Review with All / Selected / Removed** (the buttons above the list). **Selected** shows only what will be saved, **Removed** only what will be left out. Each shows a count, and the filter box and left pane still narrow the list.
 4. **Check the Export check tab** (right-hand panel, also the badge at the bottom). It lists everything your kept items reference but you've excluded. Those items must already exist in the target database, or the import will fail. Use **Include** to add any you need.
@@ -160,7 +160,8 @@ NAME Matches <^EM0[13]-00$>,<True>,<Select>
 
 - **Theme** button (top right): Auto, Light or Dark.
 - **Resize the left pane** by dragging its right edge. Double-click the edge to reset it.
+- **Resize the list columns** by dragging the right edge of a column heading. Double-click any heading edge to reset all columns. The list scrolls sideways if the columns get wider than the window.
 - Keyboard: `/` jumps to the filter, Ctrl/⌘+S saves.
 - You can drop a `.prc` file onto the page as well as an `.fhx`.
 - Large exports are fine: a 700 MB full-system export opens in a few seconds.
-- Your theme, pane width, output folder and saved rules are remembered per browser. They don't carry over to another browser or PC.
+- Your theme, pane width, column widths, output folder and saved rules are remembered per browser. They don't carry over to another browser or PC.

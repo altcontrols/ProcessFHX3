@@ -2,6 +2,11 @@
 
 Versions are **major.minor**. Each release is tagged in git (`v1.0`, `v1.1`, …), and the version shows next to the title in the tool and in Help.
 
+## v1.1 — 2026-10-30
+
+- List columns can be resized by dragging the edge of a column heading. Widths are remembered; double-click a heading edge to reset them.
+- Removed the **Only shown** button. Use **None** in the left pane, then **Select shown**.
+
 ## v1.0 — 2026-10-30
 
 First release.
