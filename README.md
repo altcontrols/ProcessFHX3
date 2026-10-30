@@ -92,6 +92,7 @@ The save dialog shows **What's being removed**, listed by group with names (for 
 
 Options in the save dialog:
 
+- **Save to:** where the Save dialog opens. By default it reopens the last folder you saved to from ProcessFHX 3. Click **Choose output folder…** to pick a fixed folder that every save starts in, even after you've saved somewhere else. **Clear** forgets it. Chrome and Edge remember the folder after you close the browser, but only show its name, not the full path. If the folder is moved or deleted, the Save dialog falls back to the last folder used. Safari and Firefox always save to Downloads.
 - **Also save the removed items** to `<name>_removed.fhx`.
 - **Change the `user=`** on every saved item to a name you choose.
 
@@ -160,4 +161,4 @@ NAME Matches <^EM0[13]-00$>,<True>,<Select>
 - Keyboard: `/` jumps to the filter, Ctrl/⌘+S saves.
 - You can drop a `.prc` file onto the page as well as an `.fhx`.
 - Large exports are fine: a 700 MB full-system export opens in a few seconds.
-- Your theme, pane width and saved rules are remembered per browser. They don't carry over to another browser or PC.
+- Your theme, pane width, output folder and saved rules are remembered per browser. They don't carry over to another browser or PC.
