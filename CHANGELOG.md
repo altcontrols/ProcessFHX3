@@ -2,6 +2,10 @@
 
 Versions are **major.minor**. Each release is tagged in git (`v1.0`, `v1.1`, …), and the version shows next to the title in the tool and in Help.
 
+## v2.0 — 2026-10-30
+
+Major release. Same tool as v1.3; the version number marks everything added since v1.0 as a new baseline: Explorer view, compare/combine, undo/redo, keyboard control, recent files, highlighted blocks of rows, resizable columns and the remembered save folder.
+
 ## v1.3 — 2026-10-30
 
 - Highlight a block of rows (click, then Shift-click; Ctrl/⌘-click for single rows; Shift+arrows; Ctrl/⌘+A) and use the new **Select highlighted** / **Deselect highlighted** buttons, or Space, on all of them at once.
