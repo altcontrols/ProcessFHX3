@@ -21,8 +21,9 @@ Nothing to install, no internet needed, and nothing is uploaded: the file is rea
    - **Main list:** tick or untick single items. Shift-click selects or deselects a range. The checkbox at the top of the list selects or deselects everything currently shown.
    - **Filter box:** type to narrow the list (by name, tag, category, plant area, class or user). Then use **Select shown**, **Deselect shown** or **Only shown**, which selects what's shown and deselects everything else.
    - Click a group name in the left pane to show only that group.
-3. **Check the Export check tab** (right-hand panel, also the badge at the bottom). It lists everything your kept items reference but you've excluded. Those items must already exist in the target database, or the import will fail. Use **Include** to add any you need.
-4. **Save clean FHX…** (or Ctrl/⌘+S). The file is saved as `<name>_clean.fhx` by default.
+3. **Review with All / Selected / Removed** (the buttons above the list). **Selected** shows only what will be saved, **Removed** only what will be left out. Each shows a count, and the filter box and left pane still narrow the list.
+4. **Check the Export check tab** (right-hand panel, also the badge at the bottom). It lists everything your kept items reference but you've excluded. Those items must already exist in the target database, or the import will fail. Use **Include** to add any you need.
+5. **Save clean FHX…** (or Ctrl/⌘+S). The file is saved as `<name>_clean.fhx` by default.
 
 The original file is never changed.
 
@@ -60,7 +61,16 @@ ProcessFHX 3 labels each one with the block that uses it, for example **EM01-00 
 
 Tick **Show embedded composites** in the toolbar to list them. Typing a class name in the filter, e.g. `EM01-00`, also finds its embedded composites.
 
-To keep every hidden definition whatever its owner (the old ProcessFHX2 behaviour), turn that on at the bottom of **Export check**.
+#### Choosing them yourself (manual mode)
+
+To override the automatic behaviour, tick **Choose embedded composites manually** at the bottom of the **Export check** tab.
+
+- Automatic keep/drop turns off, and **every** composite starts out kept, even ones whose owner is dropped. This is what ProcessFHX2 did.
+- The composites appear in the list with normal checkboxes. Untick any you don't want, one at a time or with the **Embedded composites & logic** checkbox in the left pane.
+- If you untick a composite that a kept class or module still uses, **Export check** lists it as referenced but not included, with an **Include** button. Importing without it would fail.
+- Untick the option to go back to automatic. Your manual choices are discarded.
+
+The option resets when you open another file, and Saved selections don't record it.
 
 ### Details panel
 

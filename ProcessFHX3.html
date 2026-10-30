@@ -70,6 +70,11 @@ body.resizing { cursor: col-resize; user-select: none; }
 .kind { display: inline-block; font-size: 10px; font-weight: 600; padding: 0 5px; border-radius: 8px; margin-left: 4px; border: 1px solid var(--line); color: var(--muted); vertical-align: 1px; }
 .kind.EM { color: var(--accent); border-color: var(--accent); }
 .row .id small { color: var(--muted); font-family: var(--mono); font-size: 10.5px; margin-left: 4px; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.seg button { border: 0; border-radius: 0; padding: 3px 9px; font-size: 12px; background: var(--panel); color: var(--muted); }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button.on { background: var(--sel); color: var(--text); font-weight: 600; }
+.hidpill.off { opacity: .55; }
 .hidpill { display: inline-block; font-size: 10px; padding: 0 5px; border-radius: 8px; border: 1px solid var(--hid); color: var(--hid); }
 
 #center { display: grid; grid-template-rows: auto auto 1fr; grid-template-columns: minmax(0, 1fr); min-width: 0; min-height: 0; }
@@ -213,6 +218,7 @@ dialog .ft .sp { flex: 1; }
     <section id="center">
       <div id="toolbar">
         <input id="q" type="search" placeholder="Filter by name, tag, category, area, class, user…  ( / )">
+        <span class="seg" id="stateSeg" title="Show everything, only what will be saved, or only what will be removed"><button data-st="all" class="on">All</button><button data-st="sel">Selected</button><button data-st="rem">Removed</button></span>
         <label title="Embedded composites and other hidden definitions (__XXXXXXXX_XXXXXXXX__) are the private logic of a class or module. They are kept or dropped automatically with the items that use them."><input type="checkbox" id="showHidden"> Show embedded composites</label>
         <span class="sp"></span>
         <span id="shown" class="muted"></span>
@@ -296,13 +302,14 @@ dialog .ft .sp { flex: 1; }
     <ol>
       <li>Open a DeltaV export. Everything starts as <b>kept</b>.</li>
       <li>Untick items, use the type list on the left (its checkbox selects or deselects a whole group; <b>Select all</b> / <b>None</b> sit at the top), tick the box at the top of the list to select or deselect everything shown, or filter and use <b>Only shown</b>. Drag the left pane's edge to resize it.</li>
+      <li>Use <b>All / Selected / Removed</b> above the list to review exactly what will be saved or left out.</li>
       <li>Open <b>Export check</b> to see what the kept items reference but you've excluded. Those must already exist in the target database, or the import will fail.</li>
       <li><b>Save clean FHX</b>. The save dialog lists <b>what's being removed</b> so you can spot accidental drops. After saving, the file is re-read and checked automatically; <b>✓ Verified</b> appears at the bottom when it holds exactly your selection, unchanged. Optionally save the selection (<b>Saved selections → Save as .prc</b>) to repeat the same clean on the next export.</li>
     </ol>
     <h4>Equipment vs control modules</h4>
     <p>Module classes and module instances are split into equipment-module (<span class="kind EM">EM</span>) and control-module (<span class="kind CM">CM</span>) groups. A class counts as an EM when DeltaV files it under <code>Equipment Module Classes</code>, or when it uses a command- or state-driven algorithm. An instance takes its kind from its class. Phase classes have their own group.</p>
     <h4>Embedded composites &amp; hidden definitions</h4>
-    <p>Each one is labelled with the class/module and block that use it, for example <code>EM01-00 › COMMAND_00001</code>, taken from the comment DeltaV writes above it in the export. Filtering by a class name also finds its embedded composites. DeltaV exports a class's or module's private logic (SFCs, embedded composites, action blocks) as separate <code>FUNCTION_BLOCK_DEFINITION NAME="__695C4276_014330EB__"</code> items. ProcessFHX 3 follows the references and keeps exactly the hidden definitions that kept items use, including nested ones. Hidden definitions that belong to dropped items are removed with them. To keep every hidden definition regardless, as ProcessFHX2 did, turn that on in Export check.</p>
+    <p>Each one is labelled with the class/module and block that use it, for example <code>EM01-00 › COMMAND_00001</code>, taken from the comment DeltaV writes above it in the export. Filtering by a class name also finds its embedded composites. DeltaV exports a class's or module's private logic (SFCs, embedded composites, action blocks) as separate <code>FUNCTION_BLOCK_DEFINITION NAME="__695C4276_014330EB__"</code> items. ProcessFHX 3 follows the references and keeps exactly the hidden definitions that kept items use, including nested ones. Hidden definitions that belong to dropped items are removed with them. To choose them yourself, tick <b>Choose embedded composites manually</b> at the bottom of Export check: automatic keep/drop turns off, every composite starts out kept (as ProcessFHX2 did), and you can untick individual ones. Export check then lists any composite a kept item still needs. Untick the option to go back to automatic.</p>
     <p><code>SCHEMA</code> and <code>LOCALE</code> are always kept, because DeltaV needs them to import the file.</p>
     <h4>Saved selections — rule syntax</h4>
     <p>One rule per line. Lines starting with <code>#</code> are comments.</p>
@@ -646,7 +653,7 @@ const S = {
   fileName: '', baseName: '', enc: '', size: 0, eolStyle: '', warns: [],
   ents: [], N: 0, explicit: null, eff: null, out: [], inn: [], hidden: null, locked: null,
   typeOrder: [], view: [], sort: { k: 'idx', dir: 1 }, filterType: null, q: '',
-  showHidden: false, keepOrphans: false, sel: -1, tab: 'item', external: [], lastPos: -1,
+  showHidden: false, manualHidden: false, stateFilter: "all", sel: -1, tab: 'item', external: [], lastPos: -1,
   previewFor: -1, previewText: null,
 };
 
@@ -731,7 +738,7 @@ function ingest(name, d) {
   S.typeOrder = [...GROUP_FIRST.filter(k => seenT.has(k)),
     ...[...seenT].filter(k => !GROUP_FIRST.includes(k) && !GROUP_LAST.includes(k)),
     ...GROUP_LAST.filter(k => seenT.has(k))];
-  S.filterType = null; S.q = ''; $('#q').value = ''; S.sel = -1; S.lastPos = -1; S.previewFor = -1;
+  S.filterType = null; S.q = ''; $('#q').value = ''; S.manualHidden = false; setStateFilter('all', true); S.sel = -1; S.lastPos = -1; S.previewFor = -1;
   $('#drop').classList.add('hidden');
   showVerify(null);
   ['#btnRules', '#btnSave', '#btnReport'].forEach(s => $(s).disabled = false);
@@ -780,12 +787,13 @@ function recompute() {
   const { N, eff, explicit, hidden, locked, out } = S;
   eff.fill(0);
   const stack = [];
+  // Hidden definitions normally follow their owners; in manual mode they are ticked like any other item.
   for (let i = 0; i < N; i++) {
     if (locked[i]) { eff[i] = 3; stack.push(i); }
-    else if (!hidden[i] && explicit[i]) { eff[i] = 1; stack.push(i); }
+    else if (hidden[i]) { if (S.manualHidden && explicit[i]) eff[i] = 2; }
+    else if (explicit[i]) { eff[i] = 1; stack.push(i); }
   }
-  if (S.keepOrphans) for (let i = 0; i < N; i++) if (hidden[i]) eff[i] = 2;
-  while (stack.length) {
+  if (!S.manualHidden) while (stack.length) {
     const i = stack.pop();
     for (const { t } of out[i]) if (hidden[t] && eff[t] === 0) { eff[t] = 2; stack.push(t); }
   }
@@ -793,7 +801,7 @@ function recompute() {
   for (let i = 0; i < N; i++) {
     if (!eff[i]) continue;
     for (const { t, key } of out[i]) {
-      if (eff[t] || hidden[t]) continue;
+      if (eff[t]) continue;
       let r = ext.get(t);
       if (!r) ext.set(t, r = { t, by: [] });
       if (r.by.length < 50) r.by.push({ f: i, key });
@@ -817,8 +825,16 @@ function ownersOf(t) {
   S.ownerCache.set(t, arr);
   return arr;
 }
+// Whether the user can tick or untick item i (hidden definitions only in manual mode).
+function selectable(i) { return !S.locked[i] && (!S.hidden[i] || S.manualHidden); }
 function setKeep(idxs, v) {
-  for (const i of idxs) if (!S.hidden[i] && !S.locked[i]) S.explicit[i] = v ? 1 : 0;
+  for (const i of idxs) if (selectable(i)) S.explicit[i] = v ? 1 : 0;
+  refresh();
+}
+function setManualHidden(on) {
+  if (on && !S.manualHidden) for (let i = 0; i < S.N; i++) if (S.hidden[i]) S.explicit[i] = 1;
+  S.manualHidden = on;
+  if (on) S.showHidden = $('#showHidden').checked = true;
   refresh();
 }
 
@@ -844,7 +860,7 @@ function closure(keyFilter) {
     for (let i = 0; i < S.N; i++) {
       if (!S.eff[i]) continue;
       for (const { t, key } of S.out[i]) {
-        if (S.eff[t] || S.hidden[t] || S.explicit[t]) continue;
+        if (S.eff[t] || !selectable(t) || S.explicit[t]) continue;
         if (keyFilter && !keyFilter(key, S.ents[t])) continue;
         S.explicit[t] = 1; added++; changed = true;
       }
@@ -937,6 +953,7 @@ function buildView() {
       if (e.hidden && !S.showHidden) continue;
       if (ft && e.grp !== ft) continue;
     }
+    if (S.stateFilter === 'sel' ? !S.eff[e.i] : S.stateFilter === 'rem' ? S.eff[e.i] : false) continue;
     if (words.length && !words.every(w => e.lc.includes(w))) continue;
     v.push(e.i);
   }
@@ -969,9 +986,10 @@ function renderRows() {
   for (let p = a; p < b; p++) {
     const i = S.view[p], e = S.ents[i], st = S.eff[i];
     let cb;
-    if (e.hidden) {
+    if (e.hidden && !S.manualHidden) {
       const ow = ownersOf(i);
       cb = '<span class="hidpill" title="Follows its owner: ' + esc(ow.slice(0, 5).map(o => S.ents[o].id).join(', ') || 'no owner in this file') + '">' + (st ? 'auto' : 'off') + '</span>';
+      if (!st) cb = cb.replace('class="hidpill"', 'class="hidpill off"');
     } else if (S.locked[i]) cb = '<input type="checkbox" checked disabled title="Always kept — DeltaV needs this to import the file">';
     else cb = '<input type="checkbox" data-cb="' + p + '"' + (st ? ' checked' : '') + '>';
     html += '<div class="row' + (st ? '' : ' dropped') + (e.hidden ? ' hid' : '') + (i === S.sel ? ' sel' : '') + '" style="top:' + p * ROWH + 'px" data-i="' + i + '">' +
@@ -993,7 +1011,7 @@ function renderRows() {
 function setTri(cb, idxs) {
   if (!cb) return;
   let n = 0, k = 0;
-  for (const i of idxs) if (!S.hidden[i] && !S.locked[i]) { n++; if (S.explicit[i]) k++; }
+  for (const i of idxs) if (selectable(i)) { n++; if (S.explicit[i]) k++; }
   cb.disabled = !n;
   cb.checked = n > 0 && k === n;
   cb.indeterminate = k > 0 && k < n;
@@ -1012,7 +1030,7 @@ function renderTypes() {
   for (const k of S.typeOrder) {
     const c = cnt.get(k);
     const locked = LOCKED_TYPES.has(k), hid = k === '#hidden', raw = k.replace(/#.*/, '');
-    const box = hid ? '<span class="hidpill" title="Kept automatically with the classes and modules that use them">auto</span>'
+    const box = hid && !S.manualHidden ? '<span class="hidpill" title="Kept automatically with the classes and modules that use them. To choose them yourself, turn on manual selection in Export check.">auto</span>'
       : '<input type="checkbox" data-tcb="' + esc(k) + '"' + (c.k === c.n ? ' checked' : '') + (locked ? ' disabled title="Always kept"' : ' title="Select or deselect all ' + esc(typeLabel(k)) + '"') + (c.k && c.k < c.n ? ' data-ind="1"' : '') + '>';
     html += '<div class="t' + (S.filterType === k ? ' on' : '') + '" data-type="' + esc(k) + '">' + box +
       '<span class="nm" title="' + esc(hid ? 'Hidden FUNCTION_BLOCK_DEFINITION __XXXXXXXX_XXXXXXXX__ items: the private logic inside classes and modules' : raw) + '">' + esc(typeLabel(k)) + '<small>' + esc(hid ? '__XXXXXXXX_XXXXXXXX__' : raw) + '</small></span>' +
@@ -1026,6 +1044,8 @@ function renderTypes() {
 function renderSummary() {
   let k = 0, kb = 0, tb = 0, ext = S.external.filter(x => !S.ents[x.t].oob).length;
   for (let i = 0; i < S.N; i++) { tb += S.ents[i].bytes; if (S.eff[i]) { k++; kb += S.ents[i].bytes; } }
+  $('#stateSeg [data-st=sel]').textContent = 'Selected (' + k.toLocaleString() + ')';
+  $('#stateSeg [data-st=rem]').textContent = 'Removed (' + (S.N - k).toLocaleString() + ')';
   $('#summary').innerHTML = 'Keeping <b class="k">' + k.toLocaleString() + '</b> of ' + S.N.toLocaleString() + ' items · ' + fmtBytes(kb) + ' of ' + fmtBytes(tb);
   const b = $('#checkbadge');
   b.className = 'small' + (S.N ? ' show' : '');
@@ -1052,8 +1072,8 @@ function renderPane() {
   let h = e.hidden
     ? '<h2>' + esc(e.paths.length ? e.paths[0].replace(/\//g, ' › ') : e.id) + '</h2><div class="mono muted" style="margin-bottom:8px">Embedded composite / hidden definition · ' + esc(e.id) + '</div>'
     : '<h2>' + esc(e.id) + '</h2><div class="mono muted" style="margin-bottom:8px">' + esc(e.type) + (e.kind ? ' · ' + (e.kind === 'EM' ? 'Equipment module' : 'Control module') : '') + '</div>';
-  h += st === 3 ? '<span class="chip keep">Always kept</span>' : st === 2 ? '<span class="chip hid">Kept with owner</span>' : st ? '<span class="chip keep">Kept</span>' : '<span class="chip drop">Dropped</span>';
-  if (!e.hidden && !S.locked[i]) h += ' <button class="small" data-toggle="' + i + '">' + (st ? 'Drop' : 'Keep') + '</button>';
+  h += st === 3 ? '<span class="chip keep">Always kept</span>' : st === 2 ? '<span class="chip hid">' + (S.manualHidden ? 'Kept (manual)' : 'Kept with owner') + '</span>' : st ? '<span class="chip keep">Kept</span>' : '<span class="chip drop">Dropped</span>';
+  if (selectable(i)) h += ' <button class="small" data-toggle="' + i + '">' + (st ? 'Drop' : 'Keep') + '</button>';
   h += '<h4>Properties</h4><table class="kv">';
   const rows = [['Category', e.cat], ['Plant area', e.area], ['Class', e.cls], ['Modified by', e.user], ['Modified', fmtTime(e.time)], ['Size', fmtBytes(e.bytes)], ['Out-of-box', e.oob ? 'OOB=' + e.oob : '']];
   for (const [k, v] of Object.entries(e.a)) if (!['NAME', 'TAG', 'CATEGORY', 'PLANT_AREA', 'MODULE_CLASS', 'CLASS', 'user', 'time', 'OOB'].includes(k)) rows.push([k, v]);
@@ -1065,7 +1085,7 @@ function renderPane() {
     if (e.using && e.paths.length) h += '<h4>Used by these blocks (' + e.paths.length + ')</h4><div class="mono" style="font-size:12px">' + e.paths.slice(0, 200).map(p => esc(p.replace(/\//g, ' › '))).join('<br>') + (e.paths.length > 200 ? '<br>…' : '') + '</div>';
   }
   const outs = S.out[i], hid = outs.filter(o => S.hidden[o.t]), vis = outs.filter(o => !S.hidden[o.t]);
-  const missing = vis.filter(o => !S.eff[o.t] && !S.ents[o.t].oob);
+  const missing = outs.filter(o => !S.eff[o.t] && !S.ents[o.t].oob && selectable(o.t));
   h += '<h4><span>Uses (' + vis.length + ')</span>' + (st && missing.length ? '<button class="small" data-incl="' + i + '">Include ' + missing.length + ' missing</button>' : '') + '</h4>';
   h += vis.length ? vis.sort((a, b) => cmpStr(S.ents[a.t].type, S.ents[b.t].type)).map(o => refRow(o.t, o.key)).join('') : '<p class="muted">No references to other items in this file.</p>';
   if (hid.length) {
@@ -1097,16 +1117,21 @@ function checkHtml() {
     h += '<div style="display:flex;gap:6px;margin:8px 0"><button class="small" data-inclall="1">Include all of these</button><button class="small" data-inclall="2" title="Include them, then anything they need, and so on">Include all, recursively</button></div>';
     for (const x of need) {
       const e = S.ents[x.t];
-      const users = [...new Set(x.by.flatMap(b => S.hidden[b.f] ? ownersOf(b.f).filter(o => S.eff[o]) : [b.f]))];
-      const by = users.slice(0, 3).map(f => '<button class="link" data-go="' + f + '">' + esc(S.ents[f].id) + '</button>').join(', ') + (users.length > 3 ? ' +' + (users.length - 3) : '');
-      h += '<div class="need"><div><button class="link" data-go="' + x.t + '">' + esc(e.id) + '</button> <span class="mono muted" style="font-size:11px">' + esc(e.type) + '</span><div class="by">used by ' + by + ' via ' + esc([...new Set(x.by.map(b => b.key))].join(', ')) + '</div></div><button class="small" data-keep="' + x.t + '">Include</button></div>';
+      const users = [...new Set(x.by.flatMap(b => { const ow = S.hidden[b.f] ? ownersOf(b.f).filter(o => S.eff[o]) : []; return ow.length ? ow : [b.f]; }))];
+      const by = users.slice(0, 3).map(f => '<button class="link" data-go="' + f + '">' + esc(S.ents[f].disp || S.ents[f].id) + '</button>').join(', ') + (users.length > 3 ? ' +' + (users.length - 3) : '');
+      h += '<div class="need"><div><button class="link" data-go="' + x.t + '">' + esc(e.disp || e.id) + '</button> <span class="mono muted" style="font-size:11px">' + esc(e.hidden ? 'embedded composite ' + e.id : e.type) + '</span><div class="by">used by ' + by + ' via ' + esc([...new Set(x.by.map(b => b.key))].join(', ')) + '</div></div><button class="small" data-keep="' + x.t + '">Include</button></div>';
     }
   } else h += '<div class="callout ok"><b>No missing references.</b> Everything the kept items use is either included or a built-in DeltaV item.</div>';
   if (builtin.length) h += '<h4>Built-in DeltaV items referenced (' + builtin.length + ')</h4><p class="muted" style="margin:0">Out-of-box items such as standard function block templates exist in every DeltaV database, so they are not needed in the file: ' + esc(builtin.slice(0, 40).map(x => S.ents[x.t].id).join(', ')) + (builtin.length > 40 ? '…' : '') + '</p>';
   let hk = 0, hd = 0, orphan = 0;
   for (let i = 0; i < S.N; i++) if (S.hidden[i]) { S.eff[i] ? hk++ : hd++; if (!ownersOf(i).length) orphan++; }
-  h += '<h4>Hidden definitions</h4><p style="margin:0">' + hk + ' kept with their owners, ' + hd + ' dropped with theirs' + (orphan ? ' (' + orphan + ' have no owner in this file)' : '') + '.</p>';
-  h += '<label class="field"><input type="checkbox" id="keepOrphans"' + (S.keepOrphans ? ' checked' : '') + '> Keep every hidden definition, even if its owner is dropped (ProcessFHX2 behaviour)</label>';
+  h += '<h4>Embedded composites &amp; hidden definitions</h4><p style="margin:0">' + (S.manualHidden
+    ? hk + ' kept, ' + hd + ' removed, chosen by you.'
+    : hk + ' kept with their owners, ' + hd + ' dropped with theirs' + (orphan ? ' (' + orphan + ' have no owner in this file)' : '') + '.') + '</p>';
+  h += '<label class="field"><input type="checkbox" id="manualHidden"' + (S.manualHidden ? ' checked' : '') + '> Choose embedded composites manually</label>' +
+    '<p class="muted" style="margin:0">' + (S.manualHidden
+      ? 'Automatic keep/drop is off. Every composite started out kept (as ProcessFHX2 did); tick or untick them in the list. Any composite a kept item still needs is listed above as not included. Untick this to go back to automatic.'
+      : 'Turns off automatic keep/drop and keeps every composite, even ones whose owner is dropped (as ProcessFHX2 did). You can then untick individual composites.') + '</p>';
   if (S.warns.length) h += '<h4>Parse warnings (' + S.warns.length + ')</h4><div class="callout">' + S.warns.map(esc).join('<br>') + '</div>';
   return h;
 }
@@ -1174,8 +1199,8 @@ function removalHtml() {
   if (!groups.length) return '<h4 class="rmh">What\'s being removed</h4><p class="muted" style="margin:0">Nothing. Every item is kept.</p>';
   return '<h4 class="rmh">What\'s being removed</h4><table class="rm">' + groups.map(k => {
     const r = g.get(k), all = r.off.length === r.n;
-    const names = k === '#hidden' ? '<span class="muted">Follow the classes and modules that use them</span>'
-      : r.off.slice(0, 12).map(e => esc(e.id)).join(', ') + (r.off.length > 12 ? ' <span class="muted">+' + (r.off.length - 12) + ' more</span>' : '');
+    const names = k === '#hidden' && !S.manualHidden ? '<span class="muted">Follow the classes and modules that use them</span>'
+      : r.off.slice(0, 12).map(e => esc(e.disp || e.id)).join(', ') + (r.off.length > 12 ? ' <span class="muted">+' + (r.off.length - 12) + ' more</span>' : '');
     return '<tr><td>' + esc(typeLabel(k)) + '</td><td class="ct">' + (all ? 'all ' + r.n : r.off.length + ' of ' + r.n) + '</td><td>' + names + '</td></tr>';
   }).join('') + '</table>';
 }
@@ -1227,7 +1252,7 @@ async function saveReport() {
   const lines = [['Type', 'Kind', 'Name/Tag', 'Used by blocks', 'Category', 'Plant area', 'Class', 'Modified by', 'Modified', 'Bytes', 'Included', 'Reason', 'Referenced but not included'].join(',')];
   for (const e of S.ents) {
     const st = S.eff[e.i];
-    const reason = st === 3 ? 'Always kept' : st === 2 ? 'Hidden definition of ' + ownersOf(e.i).map(o => S.ents[o].id).join(' ') : st ? 'Selected' : e.hidden ? 'Owner dropped' : 'Not selected';
+    const reason = st === 3 ? 'Always kept' : st === 2 ? (S.manualHidden ? 'Selected (manual)' : 'Hidden definition of ' + ownersOf(e.i).map(o => S.ents[o].id).join(' ')) : st ? 'Selected' : e.hidden && !S.manualHidden ? 'Owner dropped' : 'Not selected';
     const miss = st ? S.out[e.i].filter(o => !S.eff[o.t] && !S.hidden[o.t] && !S.ents[o.t].oob).map(o => S.ents[o.t].id).join(' ') : '';
     const kind = e.hidden ? 'Embedded' : e.kind === 'EM' ? 'Equipment module' : e.kind === 'CM' ? 'Control module' : '';
     lines.push([e.type, kind, e.id, e.hidden ? e.paths.join(' ') : '', e.cat, e.area, e.cls, e.user, fmtTime(e.time), e.bytes, st ? 'Y' : 'N', reason, miss].map(q).join(','));
@@ -1307,6 +1332,12 @@ $('#grip').ondblclick = () => setSide(null);
 $('#autoApply').onchange = (e) => { try { localStorage.setItem('pfhx3.auto', e.target.checked ? '1' : '0'); localStorage.setItem('pfhx3.rules', $('#rulesText').value); } catch (err) {} };
 
 $('#q').oninput = (e) => { S.q = e.target.value; buildView(); $('#scroller').scrollTop = 0; renderRows(); };
+function setStateFilter(v, quiet) {
+  S.stateFilter = v;
+  document.querySelectorAll('#stateSeg button').forEach(b => b.classList.toggle('on', b.dataset.st === v));
+  if (!quiet) { $('#scroller').scrollTop = 0; buildView(); renderRows(); }
+}
+$('#stateSeg').onclick = (e) => { const v = e.target.dataset.st; if (v) setStateFilter(v); };
 $('#showHidden').onchange = (e) => { S.showHidden = e.target.checked; buildView(); renderRows(); };
 $('#btnKeepShown').onclick = () => setKeep(S.view, 1);
 $('#btnDropShown').onclick = () => setKeep(S.view, 0);
@@ -1341,7 +1372,7 @@ $('#types').addEventListener('click', (e) => {
   const cb = e.target.closest('[data-tcb]');
   if (cb) {
     const k = cb.dataset.tcb;
-    setKeep(S.ents.filter(x => (k === '*' || x.grp === k) && !x.hidden).map(x => x.i), cb.checked ? 1 : 0);
+    setKeep(S.ents.filter(x => k === '*' || x.grp === k).map(x => x.i), cb.checked ? 1 : 0);
     return;
   }
   const t = e.target.closest('[data-type]');
@@ -1361,7 +1392,7 @@ $('#pane').addEventListener('click', async (e) => {
   if (d.go !== undefined) select(+d.go, true);
   else if (d.toggle !== undefined) setKeep([+d.toggle], S.eff[+d.toggle] ? 0 : 1);
   else if (d.keep !== undefined) setKeep([+d.keep], 1);
-  else if (d.incl !== undefined) { const i = +d.incl; setKeep(S.out[i].filter(o => !S.eff[o.t] && !S.hidden[o.t] && !S.ents[o.t].oob).map(o => o.t), 1); }
+  else if (d.incl !== undefined) { const i = +d.incl; setKeep(S.out[i].filter(o => !S.eff[o.t] && !S.ents[o.t].oob).map(o => o.t), 1); }
   else if (d.inclall !== undefined) {
     if (d.inclall === '2') { const n = closure((k, t) => !t.oob); refresh(); toast('Included ' + n + ' item(s)'); }
     else setKeep(S.external.filter(x => !S.ents[x.t].oob).map(x => x.t), 1);
@@ -1371,7 +1402,7 @@ $('#pane').addEventListener('click', async (e) => {
     if (S.previewFor === i) { S.previewText = r.text.replace(/\r\n?/g, '\n') + (r.cut ? '\n… (truncated)' : ''); renderPane(); }
   }
 });
-$('#pane').addEventListener('change', (e) => { if (e.target.id === 'keepOrphans') { S.keepOrphans = e.target.checked; refresh(); } });
+$('#pane').addEventListener('change', (e) => { if (e.target.id === 'manualHidden') setManualHidden(e.target.checked); });
 
 document.addEventListener('keydown', (e) => {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); openSave(); }
