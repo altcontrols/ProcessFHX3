@@ -2,6 +2,14 @@
 
 Versions are **major.minor**. Each release is tagged in git (`v1.0`, `v1.1`, …), and the version shows next to the title in the tool and in Help.
 
+## v1.2 — 2026-10-30
+
+- **Undo / Redo** for every selection change (Ctrl+Z / Ctrl+Y, and toolbar buttons).
+- **Keyboard control** of the list: ↓ from the filter box jumps in, arrows / PgUp / PgDn / Home / End move, Space ticks or unticks, Enter opens details. Ctrl+O opens a file.
+- **Recent files** on the start screen (Chrome and Edge), reopened with one click.
+- **Explorer view** in the left pane: the DeltaV Explorer layout rebuilt from the export (Library categories, Control Strategies by area / cell / unit, controllers with their assigned modules, Recipes, Setup). Folders filter the list and select or deselect everything under them.
+- **Compare…** two exports: only in A, only in B, changed, identical (ignoring user/time stamps). Select any group in the list, or **save a combined file** from both.
+
 ## v1.1 — 2026-10-30
 
 - List columns can be resized by dragging the edge of a column heading. Widths are remembered; double-click a heading edge to reset them.

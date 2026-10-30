@@ -9,9 +9,11 @@ The current version is shown next to the title. See [CHANGELOG.md](CHANGELOG.md)
 ## Opening the tool
 
 1. Double-click `ProcessFHX3.html`. It opens in your web browser.
-2. Drag an `.fhx` file onto the page, or click **Open FHX…**.
+2. Drag an `.fhx` file onto the page, click **Open FHX…**, or press Ctrl/⌘+O.
 
 Nothing to install, no internet needed, and nothing is uploaded: the file is read and processed on your computer.
+
+**Recent files (Chrome and Edge):** the start screen lists the last eight exports you opened. Click one to reopen it. The browser may ask once per file whether to allow it; choose "Allow on every visit" and it won't ask again. The list only stores a reference to the file, not a copy, so a file that has moved is reported as such. **Clear** forgets the list.
 
 **Browsers:** Chrome or Edge are recommended, on Windows or Mac. They give you a proper **Save as** dialog. Safari and Firefox work too, but saved files go straight to Downloads. Internet Explorer does not work.
 
@@ -23,6 +25,8 @@ Nothing to install, no internet needed, and nothing is uploaded: the file is rea
    - **Main list:** tick or untick single items. Shift-click selects or deselects a range. The checkbox at the top of the list selects or deselects everything currently shown.
    - **Filter box:** type to narrow the list (by name, tag, category, plant area, class or user). Then use **Select shown** or **Deselect shown**. To keep only what's shown, click **None** in the left pane first, then **Select shown**.
    - Click a group name in the left pane to show only that group.
+   - **Undo / Redo** (Ctrl/⌘+Z, Ctrl/⌘+Y) step back through every selection change, including Select all / None and applied rules.
+   - **Keyboard:** press ↓ in the filter box to jump into the list, then ↑ ↓ PgUp PgDn Home End move the highlight, Space ticks or unticks the item, and Enter opens its details.
 3. **Review with All / Selected / Removed** (the buttons above the list). **Selected** shows only what will be saved, **Removed** only what will be left out. Each shows a count, and the filter box and left pane still narrow the list.
 4. **Check the Export check tab** (right-hand panel, also the badge at the bottom). It lists everything your kept items reference but you've excluded. Those items must already exist in the target database, or the import will fail. Use **Include** to add any you need.
 5. **Save clean FHX…** (or Ctrl/⌘+S). The file is saved as `<name>_clean.fhx` by default.
@@ -49,6 +53,19 @@ The original file is never changed.
 | Embedded composites & logic | Hidden `__XXXXXXXX_XXXXXXXX__` definitions (see below) |
 | Function block templates, Named sets, Plant areas, … | Everything else, by type |
 | Schema, Locale | Always kept. DeltaV needs them to import the file |
+
+### Explorer view
+
+The left pane has two layouts, switched with the **Types / Explorer** buttons at its top. **Types** groups items by what they are (the table above). **Explorer** lays them out the way DeltaV Explorer does, rebuilt from the export:
+
+| Folder | What's in it |
+|---|---|
+| Library › … | Classes, composite templates, named sets and other library items, in their category folders (e.g. `Library/Control Module Classes/Gen_2`) |
+| System Configuration › Control Strategies › area › cell › unit | Modules, following their plant-area path. Areas, cells and units are folders that are also items |
+| System Configuration › Physical Network › Control Network › controller › Assigned Modules | Modules again, by the controller they're assigned to |
+| System Configuration › Recipes, Setup | Recipes in their folders; users, alarm types, engineering units and other setup items by type |
+
+Click ▸ to expand a folder, click its name to list everything under it, and tick its checkbox to select or deselect all of it. Your choice of layout is remembered.
 
 A class counts as an **equipment module (EM)** when DeltaV files it under `Equipment Module Classes`, or when it uses a command-driven or state-driven algorithm. Otherwise it is a **control module (CM)**. Modules take their kind from their class. Each module in the list carries a small **EM** or **CM** tag.
 
@@ -113,6 +130,24 @@ The check proves the file is a faithful, well-formed subset of your export. It c
 
 **Report CSV** saves a spreadsheet of every item, showing whether it is included and why, its kind, the blocks that use each embedded composite, and anything it references that isn't included.
 
+## Compare and combine two exports
+
+**Compare…** (top right) opens a second export and pairs its items with the open one by type and name. The result lists:
+
+- items only in A (the open file)
+- items only in B
+- items in both that **changed**
+- items in both that are **identical**
+
+`user=` and `time=` stamps are ignored, so an item only counts as changed when something in it is actually different. Click any A-side name to jump to it.
+
+From the comparison you can:
+
+- **Select a group in the list** (only in A, changed, identical, or only-in-A + changed), replacing the current selection or adding to it. The list switches to **Selected** so you can review it.
+- **Save combined FHX…**: writes A's current selection, followed by the items only in B, with either A's or B's version of the changed items. SCHEMA and LOCALE come from A. Items taken from B bring their embedded composites with them. The combined file is re-read, counted and checked for duplicate names before it's saved, and the footer shows **✓ Checked** when it passes. Both files must use the same encoding.
+
+Typical uses: see what changed between last month's export and this month's; merge the modules from two unit exports into one import file.
+
 ## Saved selections (optional)
 
 Use this when you clean the same kind of export again and again. It saves your selection as a short rule file that you can re-apply to the next export.
@@ -161,7 +196,7 @@ NAME Matches <^EM0[13]-00$>,<True>,<Select>
 - **Theme** button (top right): Auto, Light or Dark.
 - **Resize the left pane** by dragging its right edge. Double-click the edge to reset it.
 - **Resize the list columns** by dragging the right edge of a column heading. Double-click any heading edge to reset all columns. The list scrolls sideways if the columns get wider than the window.
-- Keyboard: `/` jumps to the filter, Ctrl/⌘+S saves.
+- Keyboard: `/` jumps to the filter, ↓ from the filter jumps into the list, Space ticks or unticks, Enter opens details, Ctrl/⌘+Z / Ctrl/⌘+Y undo / redo, Ctrl/⌘+O opens, Ctrl/⌘+S saves.
 - You can drop a `.prc` file onto the page as well as an `.fhx`.
 - Large exports are fine: a 700 MB full-system export opens in a few seconds.
-- Your theme, pane width, column widths, output folder and saved rules are remembered per browser. They don't carry over to another browser or PC.
+- Your theme, pane layout and width, column widths, output folder, recent files and saved rules are remembered per browser. They don't carry over to another browser or PC.
