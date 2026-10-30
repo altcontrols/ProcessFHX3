@@ -4,6 +4,8 @@ A tool for removing unwanted content from DeltaV `.fhx` exports. Typical use: yo
 
 It replaces ProcessFHX2 (2013).
 
+The current version is shown next to the title. See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
+
 ## Opening the tool
 
 1. Double-click `ProcessFHX3.html`. It opens in your web browser.

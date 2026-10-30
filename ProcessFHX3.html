@@ -47,6 +47,7 @@ input[type=checkbox] { accent-color: var(--accent); margin: 0; }
 header { display: flex; align-items: center; gap: 12px; padding: 8px 14px; background: var(--panel); border-bottom: 1px solid var(--line); }
 header h1 { font-size: 15px; margin: 0; white-space: nowrap; }
 header h1 span { color: var(--accent); }
+header h1 .ver { color: var(--muted); font-size: 11px; font-weight: 400; margin-left: 4px; }
 #fileinfo { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
 #fileinfo b { color: var(--text); }
 header .actions { display: flex; gap: 6px; }
@@ -203,7 +204,7 @@ dialog .ft .sp { flex: 1; }
 <body>
 <div id="app">
   <header>
-    <h1>Process<span>FHX</span> 3</h1>
+    <h1>Process<span>FHX</span> 3<small class="ver">v1.0</small></h1>
     <div id="fileinfo">No file loaded</div>
     <div class="actions">
       <button id="btnOpen">Open FHX…</button>
@@ -297,7 +298,7 @@ dialog .ft .sp { flex: 1; }
 </dialog>
 
 <dialog id="dlgHelp">
-  <div class="hd"><h3>ProcessFHX 3 — Help</h3><button class="small" data-close>Close</button></div>
+  <div class="hd"><h3>ProcessFHX 3 v1.0 — Help</h3><button class="small" data-close>Close</button></div>
   <div class="bd" id="help">
     <h4>Workflow</h4>
     <ol>
